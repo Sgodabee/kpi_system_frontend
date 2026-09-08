@@ -1,0 +1,17 @@
+<div class="shell" [class.sidebar-collapsed]="sidebarCollapsed()">
+  <app-sidebar [collapsed]="sidebarCollapsed()" />
+  <!-- Mobile overlay -->
+  @if (!sidebarCollapsed() && isMobile) {
+    <div class="shell-overlay" (click)="closeOnOverlay()"></div>
+  }
+  <div class="shell-body">
+    <app-header (menuToggle)="toggleSidebar()" />
+    <main class="shell-main">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<!-- Global toast notifications — rendered outside shell layout flow -->
+<app-toast />
+

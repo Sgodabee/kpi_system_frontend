@@ -1,0 +1,357 @@
+<div class="wf-page page-enter">
+
+  <!-- Header -->
+  <div class="pg-hd">
+    <div>
+      <div class="pg-breadcrumb">
+        <span class="material-symbols-rounded">workspaces</span>
+        Workflows
+      </div>
+      <h1 class="pg-title">Workflow Management</h1>
+      <p class="pg-desc">Monitor the review approval pipeline and configure workflow rules</p>
+    </div>
+    <div class="pg-hd-right">
+      <div class="year-picker">
+        <span class="material-symbols-rounded" style="font-size:18px;color:#64748b">calendar_month</span>
+        <select [(ngModel)]="filterYear" (change)="changeYear()" class="year-select">
+          @for (y of [2024, 2025, 2026, 2027]; track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+      <button class="btn-secondary" (click)="loadAll()">
+        <span class="material-symbols-rounded">refresh</span>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="wf-tabs">
+    <button class="wf-tab" [class.active]="activeTab() === 'pipeline'" (click)="setTab('pipeline')">
+      <span class="material-symbols-rounded">account_tree</span>
+      Pipeline
+    </button>
+    <button class="wf-tab" [class.active]="activeTab() === 'approval-chain'" (click)="setTab('approval-chain')">
+      <span class="material-symbols-rounded">schema</span>
+      Approval Chain
+    </button>
+    @if (canManage) {
+      <button class="wf-tab" [class.active]="activeTab() === 'escalation'" (click)="setTab('escalation')">
+        <span class="material-symbols-rounded">notifications_active</span>
+        Escalation Rules
+      </button>
+    }
+  </div>
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="loading-state">
+      <span class="material-symbols-rounded spin">progress_activity</span>
+      <span>Loading workflow data…</span>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (!isLoading() && error()) {
+    <div class="error-card">
+      <span class="material-symbols-rounded">error</span>
+      <p>{{ error() }}</p>
+      <button class="btn-primary" (click)="loadAll()">Retry</button>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- PIPELINE TAB                                                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  @if (!isLoading() && !error() && activeTab() === 'pipeline') {
+
+    <!-- Summary strip -->
+    <div class="summary-strip">
+      <div class="sum-item">
+        <span class="sum-val">{{ reviews().length }}</span>
+        <span class="sum-lbl">Total Reviews</span>
+      </div>
+      <div class="sum-divider"></div>
+      <div class="sum-item">
+        <span class="sum-val">{{ pendingCount() }}</span>
+        <span class="sum-lbl">In Progress</span>
+      </div>
+      <div class="sum-divider"></div>
+      <div class="sum-item">
+        <span class="sum-val">{{ totalFinalised() }}</span>
+        <span class="sum-lbl">Finalised</span>
+      </div>
+      <div class="sum-divider"></div>
+      <div class="sum-item">
+        <span class="sum-val">{{ filterYear() }}</span>
+        <span class="sum-lbl">Review Year</span>
+      </div>
+    </div>
+
+    <!-- Visual flow -->
+    <div class="flow-section">
+      <h2 class="section-title">Approval Flow</h2>
+      <div class="flow-track">
+        @for (stage of STAGES; track stage.id; let last = $last) {
+          <div class="flow-node {{ stage.colorClass }}" [class.has-items]="stageCount(stage.id) > 0">
+            <div class="flow-node-icon">
+              <span class="material-symbols-rounded">{{ stage.icon }}</span>
+            </div>
+            <div class="flow-node-count">{{ stageCount(stage.id) }}</div>
+            <div class="flow-node-label">{{ stage.label }}</div>
+            <div class="flow-node-role">{{ stage.role }}</div>
+          </div>
+          @if (!last) {
+            <div class="flow-arrow">
+              <span class="material-symbols-rounded">arrow_forward</span>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Stage breakdown cards -->
+    <div class="stage-grid">
+      @for (stage of STAGES; track stage.id) {
+        @if (stageCount(stage.id) > 0) {
+          <div class="stage-card {{ stage.colorClass }}">
+            <div class="stage-card-head">
+              <div class="stage-card-icon">
+                <span class="material-symbols-rounded">{{ stage.icon }}</span>
+              </div>
+              <div>
+                <div class="stage-card-title">{{ stage.label }}</div>
+                <div class="stage-card-sub">{{ stage.role }}</div>
+              </div>
+              <span class="stage-badge">{{ stageCount(stage.id) }}</span>
+            </div>
+            <p class="stage-card-desc">{{ stage.description }}</p>
+            <div class="stage-card-list">
+              @for (r of reviewsForStage(stage.id); track r.id; let i = $index) {
+                @if (i < 4) {
+                  <div class="stage-item" (click)="openReview(r.id)">
+                    <div class="stage-item-avatar">{{ (r.employeeName ?? '?').charAt(0) }}</div>
+                    <div class="stage-item-info">
+                      <span class="stage-item-name">{{ r.employeeName ?? 'Unknown' }}</span>
+                      <span class="stage-item-dept">{{ r.departmentName || '—' }}</span>
+                    </div>
+                    @if (r.overallScore != null) {
+                      <span class="stage-score {{ scoreColor(r.overallScore) }}">{{ r.overallScore }}%</span>
+                    }
+                    <span class="material-symbols-rounded stage-item-arrow">chevron_right</span>
+                  </div>
+                }
+              }
+              @if (stageCount(stage.id) > 4) {
+                <p class="stage-more">+{{ stageCount(stage.id) - 4 }} more</p>
+              }
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Full active reviews table -->
+    <div class="table-section">
+      <h2 class="section-title">Active Reviews</h2>
+      @if (activeReviews().length === 0) {
+        <div class="empty-state">
+          <span class="material-symbols-rounded">inbox</span>
+          <p>No active reviews in the pipeline for {{ filterYear() }}</p>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Current Stage</th>
+                <th>Score</th>
+                <th>Submitted</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of activeReviews(); track r.id) {
+                <tr (click)="openReview(r.id)" class="clickable-row">
+                  <td>
+                    <div class="emp-cell">
+                      <div class="emp-avatar">{{ (r.employeeName ?? '?').charAt(0) }}</div>
+                      <div>
+                        <div class="emp-name">{{ r.employeeName ?? 'Unknown' }}</div>
+                        @if (r.employeeNumber) {
+                          <div class="emp-num">{{ r.employeeNumber }}</div>
+                        }
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ r.departmentName || '—' }}</td>
+                  <td>
+                    <span class="stage-pill">{{ stepLabel(r.currentStep ?? '') }}</span>
+                  </td>
+                  <td>
+                    @if (r.overallScore != null) {
+                      <span class="score-chip {{ scoreColor(r.overallScore) }}">{{ r.overallScore }}%</span>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td class="text-muted">
+                    {{ r.submittedAt ? (r.submittedAt | slice:0:10) : '—' }}
+                  </td>
+                  <td>
+                    <span class="material-symbols-rounded row-arrow">chevron_right</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- APPROVAL CHAIN TAB                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  @if (!isLoading() && !error() && activeTab() === 'approval-chain') {
+    <div class="chain-section">
+      <h2 class="section-title">Approval Chain</h2>
+      <p class="section-desc">
+        The following approval chain governs how performance reviews progress from submission to finalisation.
+      </p>
+
+      <div class="chain-timeline">
+        @for (step of CHAIN; track step.order) {
+          <div class="chain-step">
+            <div class="chain-line-wrap">
+              <div class="chain-circle">
+                <span class="material-symbols-rounded">{{ step.icon }}</span>
+              </div>
+              <div class="chain-line"></div>
+            </div>
+            <div class="chain-content">
+              <div class="chain-head">
+                <span class="chain-order">Step {{ step.order }}</span>
+                <h3 class="chain-stage">{{ step.stage }}</h3>
+                <span class="chain-approver-badge">{{ step.role }}</span>
+              </div>
+              <p class="chain-action">{{ step.action }}</p>
+              <div class="chain-meta">
+                <span class="material-symbols-rounded" style="font-size:14px">schedule</span>
+                <span class="chain-sla">SLA: {{ step.sla }}</span>
+                <span class="chain-approver">
+                  <span class="material-symbols-rounded" style="font-size:14px">person</span>
+                  {{ step.approver }}
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Workflow diagram summary -->
+      <div class="chain-diagram">
+        <h3 class="chain-diagram-title">Flow Summary</h3>
+        <div class="chain-flow-row">
+          @for (stage of STAGES; track stage.id; let last = $last) {
+            <div class="chain-flow-node {{ stage.colorClass }}">
+              <span class="material-symbols-rounded">{{ stage.icon }}</span>
+              <span>{{ stage.label }}</span>
+              <small>{{ stage.role }}</small>
+            </div>
+            @if (!last) {
+              <div class="chain-flow-arrow">→</div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- ESCALATION RULES TAB                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  @if (!isLoading() && !error() && activeTab() === 'escalation' && canManage) {
+    <div class="escalation-section">
+      <h2 class="section-title">Escalation Rules</h2>
+      <p class="section-desc">
+        Configure time-based escalation thresholds. Reviews that exceed these limits will trigger automatic reminders.
+      </p>
+
+      <div class="esc-cards">
+
+        <div class="esc-card">
+          <div class="esc-card-icon blue">
+            <span class="material-symbols-rounded">notifications</span>
+          </div>
+          <div class="esc-card-body">
+            <label class="esc-label">Review Reminder (days before deadline)</label>
+            <p class="esc-desc">Send a reminder email to the approver this many days before the SLA expires.</p>
+            <div class="esc-input-row">
+              <input type="number" class="esc-input" min="1" max="30"
+                [value]="escalationConfig().reviewReminderDays"
+                (change)="updateEscalationField('reviewReminderDays', +$any($event.target).value)" />
+              <span class="esc-unit">days</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="esc-card">
+          <div class="esc-card-icon orange">
+            <span class="material-symbols-rounded">warning</span>
+          </div>
+          <div class="esc-card-body">
+            <label class="esc-label">Escalation Trigger (days overdue)</label>
+            <p class="esc-desc">Escalate to the next level of management after this many days without action.</p>
+            <div class="esc-input-row">
+              <input type="number" class="esc-input" min="1" max="60"
+                [value]="escalationConfig().escalationAfterDays"
+                (change)="updateEscalationField('escalationAfterDays', +$any($event.target).value)" />
+              <span class="esc-unit">days</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="esc-card">
+          <div class="esc-card-icon purple">
+            <span class="material-symbols-rounded">timer</span>
+          </div>
+          <div class="esc-card-body">
+            <label class="esc-label">Session Timeout</label>
+            <p class="esc-desc">Automatically log out inactive users after this many minutes.</p>
+            <div class="esc-input-row">
+              <input type="number" class="esc-input" min="5" max="480"
+                [value]="escalationConfig().sessionTimeoutMinutes"
+                (change)="updateEscalationField('sessionTimeoutMinutes', +$any($event.target).value)" />
+              <span class="esc-unit">minutes</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="esc-actions">
+        <button class="btn-primary" (click)="saveEscalation()" [disabled]="isSavingEscalation()">
+          @if (isSavingEscalation()) {
+            <span class="material-symbols-rounded spin">progress_activity</span>
+            Saving…
+          } @else {
+            <span class="material-symbols-rounded">save</span>
+            Save Escalation Rules
+          }
+        </button>
+      </div>
+
+      <!-- Info note -->
+      <div class="esc-info">
+        <span class="material-symbols-rounded" style="color:#3b82f6;font-size:18px">info</span>
+        <p>Changes take effect immediately. The system will apply new thresholds to all future review cycles.</p>
+      </div>
+    </div>
+  }
+
+</div>
+

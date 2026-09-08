@@ -1,0 +1,209 @@
+<div class="rc-page">
+
+  <!-- ── Page header ──────────────────────────────────────── -->
+  <div class="rc-header">
+    <div>
+      <h1 class="rc-heading">Report Centre</h1>
+      <p class="rc-sub">Generate, download and track performance reports</p>
+    </div>
+  </div>
+
+  <div class="rc-layout">
+
+    <!-- ══ LEFT — Report Builder ══════════════════════════ -->
+    <section class="rc-builder">
+
+      <!-- Report type grid -->
+      <div class="builder-card">
+        <h2 class="builder-title">
+          <span class="material-symbols-rounded">analytics</span>Select Report
+        </h2>
+        <div class="type-grid">
+          @for (rt of reportTypes; track rt.value) {
+            <button class="type-tile" [class.type-tile--active]="selectedType() === rt.value"
+                    (click)="selectType(rt.value)">
+              <span class="material-symbols-rounded type-icon">{{ rt.icon }}</span>
+              <span class="type-label">{{ rt.label }}</span>
+            </button>
+          }
+        </div>
+        @if (selectedTypeMeta()) {
+          <p class="type-desc">{{ selectedTypeMeta().description }}</p>
+        }
+      </div>
+
+      <!-- Parameters -->
+      <div class="builder-card">
+        <h2 class="builder-title">
+          <span class="material-symbols-rounded">tune</span>Parameters
+        </h2>
+
+        <div class="params-grid">
+          @if (showDeptParam) {
+            <div class="param-field">
+              <label class="param-label">Department</label>
+              <select class="param-select" [(ngModel)]="params.departmentId">
+                <option [ngValue]="undefined">All departments</option>
+                @for (d of departments(); track d.id) {
+                  <option [ngValue]="d.id">{{ d.name }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          @if (showEmpParam) {
+            <div class="param-field">
+              <label class="param-label">Employee</label>
+              <select class="param-select" [(ngModel)]="params.employeeId">
+                <option [ngValue]="undefined">All employees</option>
+                @for (e of employees(); track e.id) {
+                  <option [ngValue]="e.id">{{ e.fullName }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          @if (showPeriodParam) {
+            <div class="param-field">
+              <label class="param-label">Period</label>
+              <select class="param-select" [(ngModel)]="params.period">
+                <option [ngValue]="undefined">All periods</option>
+                @for (opt of periodOptions; track opt.value) {
+                  <option [ngValue]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          @if (showFYParam) {
+            <div class="param-field">
+              <label class="param-label">Financial Year</label>
+              <select class="param-select" [(ngModel)]="params.financialYear">
+                <option [ngValue]="undefined">All years</option>
+                @for (fy of fyOptions; track fy) {
+                  <option [ngValue]="fy">{{ fy }}</option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Format + Generate -->
+      <div class="builder-card">
+        <h2 class="builder-title">
+          <span class="material-symbols-rounded">file_download</span>Format
+        </h2>
+        <div class="format-row">
+          @for (fmt of formats; track fmt) {
+            <button class="fmt-btn" [class.fmt-btn--active]="selectedFormat() === fmt"
+                    (click)="selectedFormat.set(fmt)">
+              <span class="material-symbols-rounded">{{ formatIcon(fmt) }}</span>
+              {{ fmt }}
+            </button>
+          }
+        </div>
+
+        @if (generateSuccess()) {
+          <div class="gen-success">
+            <span class="material-symbols-rounded">check_circle</span>{{ generateSuccess() }}
+          </div>
+        }
+        @if (generateError()) {
+          <div class="gen-error">
+            <span class="material-symbols-rounded">error</span>{{ generateError() }}
+          </div>
+        }
+
+        <button class="preview-btn" (click)="previewReport()">
+          <span class="material-symbols-rounded">visibility</span>
+          Preview In Browser
+        </button>
+
+        <button class="gen-btn" [disabled]="isGenerating()" (click)="generate()">
+          @if (isGenerating()) {
+            <span class="gen-spinner"></span>Generating…
+          } @else {
+            <span class="material-symbols-rounded">play_arrow</span>Generate Report
+          }
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ══ RIGHT — Recent Reports ══════════════════════════ -->
+    <section class="rc-history">
+      <div class="history-card">
+        <div class="history-header">
+          <h2 class="builder-title" style="margin:0">
+            <span class="material-symbols-rounded">history</span>Recent Reports
+          </h2>
+          @if (hasProcessing()) {
+            <span class="processing-hint">
+              <span class="pulse-dot"></span>Processing…
+            </span>
+          }
+        </div>
+
+        @if (execError()) {
+          <div class="gen-error" style="margin:1rem">
+            <span class="material-symbols-rounded">error</span>{{ execError() }}
+          </div>
+        } @else if (isLoadingExec()) {
+          <div class="history-loading">
+            <span class="spinner"></span>Loading…
+          </div>
+        } @else if (executions().length === 0) {
+          <div class="history-empty">
+            <span class="material-symbols-rounded">description</span>
+            <p>No reports yet. Generate one to see it here.</p>
+          </div>
+        } @else {
+          <table class="exec-table">
+            <thead>
+              <tr>
+                <th>Report</th>
+                <th>Format</th>
+                <th>Requested</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ex of executions(); track ex.id) {
+                <tr class="exec-row">
+                  <td class="exec-name">{{ getDisplayName(ex) }}</td>
+                  <td>
+                    <span class="fmt-chip">
+                      <span class="material-symbols-rounded">{{ formatIcon(ex.format) }}</span>
+                      {{ ex.format }}
+                    </span>
+                  </td>
+                  <td class="text-muted">{{ getRequestedAt(ex) }}</td>
+                  <td>
+                    <span class="status-chip" [class]="statusClass(ex.status)">
+                      <span class="material-symbols-rounded">{{ statusIcon(ex.status) }}</span>
+                      {{ statusLabel(ex.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (ex.status === 'COMPLETED') {
+                      <a class="dl-btn" [href]="getDownloadUrl(ex)" target="_blank" rel="noopener">
+                        <span class="material-symbols-rounded">download</span>Download
+                      </a>
+                    } @else if (ex.status === 'FAILED') {
+                      <span class="failed-txt">{{ ex.errorMessage ?? 'Failed' }}</span>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </section>
+
+  </div>
+</div>

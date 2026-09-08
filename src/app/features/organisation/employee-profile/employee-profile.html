@@ -1,0 +1,240 @@
+<div class="org-page page-enter">
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div>
+      <div class="skeleton" style="height:240px;border-radius:16px;margin-bottom:20px"></div>
+      <div class="skeleton" style="height:48px;border-radius:12px;margin-bottom:20px"></div>
+      <div class="skeleton" style="height:400px;border-radius:12px"></div>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (!isLoading() && error()) {
+    <div class="info-card">
+      <div class="error-state">
+        <span class="material-symbols-rounded">error</span>
+        <h3>{{ error() }}</h3>
+        <button class="btn-secondary" (click)="goBack()">
+          <span class="material-symbols-rounded">arrow_back</span> Go Back
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (!isLoading() && !error() && employee()) {
+
+    <!-- Breadcrumb -->
+    <div class="detail-nav">
+      <button class="back-btn" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span>
+        Back to Employees
+      </button>
+      <div class="pg-breadcrumb" style="margin:0">
+        <a routerLink="/employees">Employees</a>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <span>{{ employee()!.fullName }}</span>
+      </div>
+    </div>
+
+    <!-- Profile Hero -->
+    <div class="profile-hero">
+      <!-- Left: Avatar + identity -->
+      <div class="profile-hero-left">
+        <div class="profile-avatar-ring">
+          <div class="profile-avatar">{{ initials }}</div>
+          <div class="profile-status-dot {{ employee()!.status === 'ACTIVE' ? 'online' : 'offline' }}"></div>
+        </div>
+        <div class="profile-identity">
+          <h1 class="profile-name">{{ employee()!.fullName }}</h1>
+          <p class="profile-position">{{ employee()!.positionTitle ?? 'No position assigned' }}</p>
+          <div class="profile-tags">
+            @if (employee()!.departmentName) {
+              <span class="profile-tag">
+                <span class="material-symbols-rounded" style="font-size:13px">account_tree</span>
+                {{ employee()!.departmentName }}
+              </span>
+            }
+            @if (employee()!.divisionName) {
+              <span class="profile-tag">
+                <span class="material-symbols-rounded" style="font-size:13px">folder</span>
+                {{ employee()!.divisionName }}
+              </span>
+            }
+            <span class="badge {{ statusBadge(employee()!.status) }}">
+              {{ employee()!.status | titlecase }}
+            </span>
+          </div>
+          @if (employee()!.email) {
+            <a class="profile-email" [href]="'mailto:' + employee()!.email">
+              <span class="material-symbols-rounded" style="font-size:15px">email</span>
+              {{ employee()!.email }}
+            </a>
+          }
+        </div>
+      </div>
+
+      <!-- Right: Performance gauge + KPI stats -->
+      <div class="profile-hero-right">
+        <!-- Score gauge -->
+        <div class="profile-gauge-wrap">
+          <svg viewBox="0 0 120 120" width="120" height="120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+            <circle cx="60" cy="60" r="54" fill="none"
+              [attr.stroke]="gaugeColor(employee()!.performanceScore)"
+              stroke-width="10" stroke-dasharray="339.3"
+              [attr.stroke-dashoffset]="gaugeOffset(employee()!.performanceScore)"
+              stroke-linecap="round" transform="rotate(-90 60 60)"
+              style="transition:stroke-dashoffset 1.5s cubic-bezier(0.25,1,0.5,1)"/>
+            @if (employee()!.performanceScore != null) {
+              <text x="60" y="58" text-anchor="middle" font-size="19" font-weight="800" fill="#0f172a">
+                {{ employee()!.performanceScore }}%
+              </text>
+              <text x="60" y="74" text-anchor="middle" font-size="9" font-weight="500" fill="#64748b">
+                SCORE
+              </text>
+            } @else {
+              <text x="60" y="64" text-anchor="middle" font-size="12" font-weight="600" fill="#94a3b8">N/A</text>
+            }
+          </svg>
+          <div class="score-chip {{ scoreClass(employee()!.performanceScore) }}" style="text-align:center;margin-top:4px">
+            {{ employee()!.performanceScore != null ? (scoreClass(employee()!.performanceScore) | titlecase) : 'Not rated' }}
+          </div>
+        </div>
+
+        <!-- KPI mini cards -->
+        <div class="profile-kpi-mini">
+          <div class="kpi-mini-card blue">
+            <span class="kpi-mini-val">{{ employee()!.assignedKpiCount ?? '—' }}</span>
+            <span class="kpi-mini-lbl">Assigned</span>
+          </div>
+          <div class="kpi-mini-card green">
+            <span class="kpi-mini-val">{{ employee()!.completedKpiCount ?? '—' }}</span>
+            <span class="kpi-mini-lbl">Completed</span>
+          </div>
+          <div class="kpi-mini-card orange">
+            <span class="kpi-mini-val">{{ employee()!.pendingKpiCount ?? '—' }}</span>
+            <span class="kpi-mini-lbl">Pending</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review action (managers only) -->
+      @if (canReview) {
+        <div class="profile-actions">
+          <button class="btn-primary" (click)="startReview()" [disabled]="isStartingReview()">
+            @if (isStartingReview()) {
+              <span class="material-symbols-rounded spin">progress_activity</span>
+              Starting…
+            } @else {
+              <span class="material-symbols-rounded">rate_review</span>
+              Start Review
+            }
+          </button>
+          <button class="btn-secondary">
+            <span class="material-symbols-rounded">more_horiz</span>
+          </button>
+        </div>
+        @if (reviewError()) {
+          <p style="color:var(--danger);font-size:0.8125rem;margin-top:6px;text-align:right">
+            {{ reviewError() }}
+          </p>
+        }
+      }
+    </div>
+
+    <!-- Tab card -->
+    <div class="info-card" style="padding:0;overflow:hidden">
+      <div class="tab-bar" style="padding:0 20px">
+        @for (tab of tabs; track tab.key) {
+          <button class="tab-btn" [class.active]="activeTab() === tab.key" (click)="activeTab.set(tab.key)">
+            <span class="material-symbols-rounded">{{ tab.icon }}</span>
+            {{ tab.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Tab: Overview -->
+      @if (activeTab() === 'overview') {
+        <div class="tab-content">
+          <div class="profile-overview-grid">
+            <!-- Organisation card -->
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">Organisation</div>
+              @if (employee()!.employeeNumber) {
+                <div class="info-row">
+                  <span class="info-label">Employee #</span>
+                  <span class="info-value">{{ employee()!.employeeNumber }}</span>
+                </div>
+              }
+              <div class="info-row">
+                <span class="info-label">Department</span>
+                <span class="info-value">{{ employee()!.departmentName ?? '—' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Division</span>
+                <span class="info-value">{{ employee()!.divisionName ?? '—' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Position</span>
+                <span class="info-value">{{ employee()!.positionTitle ?? '—' }}</span>
+              </div>
+              @if (employee()!.grade) {
+                <div class="info-row">
+                  <span class="info-label">Grade</span>
+                  <span class="info-value">{{ employee()!.grade }}</span>
+                </div>
+              }
+              @if (employee()!.managerName) {
+                <div class="info-row">
+                  <span class="info-label">Manager</span>
+                  <span class="info-value">{{ employee()!.managerName }}</span>
+                </div>
+              }
+              @if (employee()!.hireDate) {
+                <div class="info-row">
+                  <span class="info-label">Hire Date</span>
+                  <span class="info-value">{{ employee()!.hireDate | date:'dd MMM yyyy' }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Contact card -->
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">Contact</div>
+              <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">
+                  <a [href]="'mailto:' + employee()!.email" style="color:var(--primary)">{{ employee()!.email }}</a>
+                </span>
+              </div>
+              @if (employee()!.phoneNumber) {
+                <div class="info-row">
+                  <span class="info-label">Phone</span>
+                  <span class="info-value">{{ employee()!.phoneNumber }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Tabs: Coming Soon -->
+      @if (activeTab() !== 'overview') {
+        <div class="tab-content">
+          <div class="empty-state">
+            <span class="material-symbols-rounded">
+              {{ tabs.find(t => t.key === activeTab())?.icon }}
+            </span>
+            <h3>{{ tabs.find(t => t.key === activeTab())?.label }}</h3>
+            <p>This section is available in upcoming sprints (F4–F6).</p>
+            <span class="badge badge-primary">Coming Soon</span>
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+</div>
+

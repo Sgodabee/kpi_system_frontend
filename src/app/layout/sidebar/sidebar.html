@@ -1,0 +1,71 @@
+<nav class="sidebar" [class.collapsed]="collapsed()">
+
+  <!-- Brand -->
+  <div class="sb-brand">
+    <div class="sb-logo">
+      <span class="material-symbols-rounded" style="font-size:22px;color:#fff;">bar_chart</span>
+    </div>
+    @if (!collapsed()) {
+      <div class="sb-brand-text">
+        <span class="sb-brand-name">KPI System</span>
+        <span class="sb-brand-sub">Municipality</span>
+      </div>
+    }
+  </div>
+
+  <!-- Navigation -->
+  <div class="sb-nav">
+    @for (section of visibleSections; track section.title) {
+      <div class="sb-section">
+        @if (section.title && !collapsed()) {
+          <span class="sb-section-label">{{ section.title }}</span>
+        }
+        @if (section.title && collapsed()) {
+          <div class="sb-section-divider"></div>
+        }
+        @for (item of section.items; track item.route) {
+          <a
+            class="sb-link"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+            [title]="collapsed() ? item.label : ''"
+          >
+            <span class="material-symbols-rounded sb-icon">{{ item.icon }}</span>
+            @if (!collapsed()) {
+              <span class="sb-label">{{ item.label }}</span>
+              @if (item.badge || getBadge(item.route)) {
+                <span class="sb-badge">{{ item.badge ?? getBadge(item.route) }}</span>
+              }
+            } @else {
+              @if (item.badge || getBadge(item.route)) {
+                <span class="sb-badge-dot"></span>
+              }
+            }
+          </a>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Footer / User -->
+  <div class="sb-footer">
+    @if (!collapsed()) {
+      <div class="sb-user">
+        <div class="sb-avatar">{{ userInitial }}</div>
+        <div class="sb-user-info">
+          <span class="sb-user-name truncate">{{ currentUser()?.fullName }}</span>
+          <span class="sb-user-role">{{ primaryRole }}</span>
+        </div>
+        <button class="sb-logout" (click)="logout()" title="Sign out">
+          <span class="material-symbols-rounded" style="font-size:18px;">logout</span>
+        </button>
+      </div>
+    } @else {
+      <button class="sb-logout-sm" (click)="logout()" title="Sign out">
+        <span class="material-symbols-rounded" style="font-size:20px;">logout</span>
+      </button>
+    }
+  </div>
+
+</nav>

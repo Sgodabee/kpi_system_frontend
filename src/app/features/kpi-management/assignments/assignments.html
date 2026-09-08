@@ -1,0 +1,390 @@
+<div class="org-page page-enter">
+
+  <!-- Page Header -->
+  <div class="pg-hd">
+    <div>
+      <div class="pg-breadcrumb">
+        <span class="material-symbols-rounded">assignment_ind</span>
+        KPI Management
+      </div>
+      <h1 class="pg-title">KPI Assignments</h1>
+      <p class="pg-desc">
+        @if (!isLoading() && total > 0) { {{ total }} assignments }
+        @else { Track KPI assignments across the municipality }
+      </p>
+    </div>
+    @if (canAssign) {
+      <div class="pg-hd-right">
+        <button class="btn-primary" (click)="openAssign()">
+          <span class="material-symbols-rounded">add</span>
+          Assign KPI
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Status summary strip -->
+  @if (!isLoading() && total > 0) {
+    <div class="assn-summary">
+      <button class="assn-summary-item all" [class.active]="!selectedStatus"
+        (click)="filterByStatus('')">
+        <span class="assn-sum-val">{{ total }}</span>
+        <span class="assn-sum-lbl">Total</span>
+      </button>
+      <button class="assn-summary-item pending" [class.active]="selectedStatus === 'ACTIVE'"
+        (click)="filterByStatus('ACTIVE')">
+        <span class="assn-sum-val">{{ activeCount }}</span>
+        <span class="assn-sum-lbl">Active</span>
+      </button>
+      <button class="assn-summary-item approved" [class.active]="selectedStatus === 'COMPLETED'"
+        (click)="filterByStatus('COMPLETED')">
+        <span class="assn-sum-val">{{ completedCount }}</span>
+        <span class="assn-sum-lbl">Completed</span>
+      </button>
+      <button class="assn-summary-item rejected" [class.active]="selectedStatus === 'CANCELLED'"
+        (click)="filterByStatus('CANCELLED')">
+        <span class="assn-sum-val">{{ cancelledCount }}</span>
+        <span class="assn-sum-lbl">Cancelled</span>
+      </button>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="material-symbols-rounded">search</span>
+      <input type="text" placeholder="Search by KPI or employee name…" [formControl]="searchCtrl" />
+    </div>
+
+    <select class="filter-select" (change)="onDeptChange($event)" [value]="selectedDept">
+      <option value="0">All Departments</option>
+      @for (d of departments(); track d.id) {
+        <option [value]="d.id">{{ d.name }}</option>
+      }
+    </select>
+
+    <select class="filter-select" (change)="onStatusChange($event)" [value]="selectedStatus">
+      @for (s of statusOptions; track s.value) {
+        <option [value]="s.value">{{ s.label }}</option>
+      }
+    </select>
+
+    @if (searchCtrl.value || selectedDept || selectedStatus) {
+      <button class="btn-secondary" (click)="clearFilters()">
+        <span class="material-symbols-rounded">filter_alt_off</span> Clear
+      </button>
+    }
+    @if (!isLoading()) {
+      <span class="filter-count">{{ total }} results</span>
+    }
+  </div>
+
+  <!-- Table card -->
+  <div class="assn-table-card">
+
+    @if (isLoading()) {
+      <div style="padding:10px">
+        @for (s of [1,2,3,4,5,6,7]; track s) {
+          <div class="skeleton-row" style="margin-bottom:3px"></div>
+        }
+      </div>
+    }
+
+    @if (!isLoading() && error()) {
+      <div class="error-state">
+        <span class="material-symbols-rounded">error</span>
+        <h3>{{ error() }}</h3>
+        <button class="btn-primary" (click)="load()">
+          <span class="material-symbols-rounded">refresh</span> Retry
+        </button>
+      </div>
+    }
+
+    @if (!isLoading() && !error() && assignments.length === 0) {
+      <div class="empty-state">
+        <span class="material-symbols-rounded">assignment_ind</span>
+        <h3>No assignments found</h3>
+        <p>{{ searchCtrl.value || selectedDept || selectedStatus ? 'Try adjusting your filters.' : 'No KPI assignments have been created yet.' }}</p>
+      </div>
+    }
+
+    @if (!isLoading() && !error() && assignments.length > 0) {
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="sortable" [class.sorted]="sortField==='kpiName'" (click)="sort('kpiName')">
+                KPI <span class="material-symbols-rounded sort-ico">{{ sortIcon('kpiName') }}</span>
+              </th>
+              <th class="sortable" [class.sorted]="sortField==='employeeName'" (click)="sort('employeeName')">
+                Employee <span class="material-symbols-rounded sort-ico">{{ sortIcon('employeeName') }}</span>
+              </th>
+              <th>Department</th>
+              <th class="sortable" [class.sorted]="sortField==='targetValue'" (click)="sort('targetValue')">
+                Target <span class="material-symbols-rounded sort-ico">{{ sortIcon('targetValue') }}</span>
+              </th>
+              <th>Actual</th>
+              <th>Achievement</th>
+              <th class="sortable" [class.sorted]="sortField==='dueDate'" (click)="sort('dueDate')">
+                Due Date <span class="material-symbols-rounded sort-ico">{{ sortIcon('dueDate') }}</span>
+              </th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of assignments; track a.id) {
+              <tr (click)="viewAssignment(a.id)" [class.overdue-row]="isOverdue(a.dueDate) && a.status !== 'COMPLETED'">
+                <td>
+                  <div>
+                    <div class="row-name">{{ a.kpiName ?? a.kpiDefinitionName ?? '—' }}</div>
+                    @if (a.kpiCode ?? a.kpiDefinitionCode) {
+                      <div class="row-sub"><span class="kpi-code-sm">{{ a.kpiCode ?? a.kpiDefinitionCode }}</span></div>
+                    }
+                    @if (a.categoryName) {
+                      <div class="row-sub">{{ a.categoryName }}</div>
+                    }
+                  </div>
+                </td>
+                <td>
+                  @if (a.employeeName) {
+                    <div class="row-person">
+                      <div class="row-avatar" style="width:28px;height:28px;font-size:0.65rem">
+                        {{ (a.employeeName.split(' ')[0]?.[0] ?? '') + (a.employeeName.split(' ')[1]?.[0] ?? '') }}
+                      </div>
+                      <div class="row-name">{{ a.employeeName }}</div>
+                    </div>
+                  } @else if (a.assigneeType && a.assigneeType !== 'EMPLOYEE') {
+                    <span class="kpi-code-sm">{{ a.assigneeType | titlecase }}</span>
+                  } @else { — }
+                </td>
+                <td>{{ a.departmentName ?? '—' }}</td>
+                <td>{{ a.targetValue != null ? a.targetValue + (a.unit ? ' ' + a.unit : '') : '—' }}</td>
+                <td>{{ a.actualValue  != null ? a.actualValue  + (a.unit ? ' ' + a.unit : '') : '—' }}</td>
+                <td>
+                  @if (a.achievementPct != null) {
+                    <div style="display:flex;align-items:center;gap:8px;min-width:100px">
+                      <div class="score-bar" style="height:5px;width:60px">
+                        <div class="score-bar-fill {{ achievementColor(a.achievementPct) }}"
+                             [style.width]="(a.achievementPct > 100 ? 100 : a.achievementPct) + '%'">
+                        </div>
+                      </div>
+                      <span class="score-chip {{ achievementColor(a.achievementPct) }}" style="font-size:0.78rem">
+                        {{ a.achievementPct | number:'1.0-0' }}%
+                      </span>
+                    </div>
+                  } @else { — }
+                </td>
+                <td>
+                  @if (a.dueDate) {
+                    <span [class.overdue-date]="isOverdue(a.dueDate) && a.status !== 'COMPLETED'">
+                      {{ a.dueDate | date:'dd MMM yyyy' }}
+                      @if (isOverdue(a.dueDate) && a.status !== 'COMPLETED') {
+                        <span class="material-symbols-rounded" style="font-size:14px;color:#ef4444">warning</span>
+                      }
+                    </span>
+                  } @else { — }
+                </td>
+                <td>
+                  <div class="status-with-icon">
+                    <span class="material-symbols-rounded status-icon" style="font-size:16px">
+                      {{ statusIcon(a.status) }}
+                    </span>
+                    <span class="badge {{ statusBadge(a.status) }}">{{ statusLabel(a.status) }}</span>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPages > 1) {
+        <div class="pagination">
+          <span class="pg-info">Showing {{ startItem }}–{{ endItem }} of {{ total }} assignments</span>
+          <div class="pg-btns">
+            <button class="pg-btn" [disabled]="currentPage === 0" (click)="goToPage(0)">
+              <span class="material-symbols-rounded">first_page</span>
+            </button>
+            <button class="pg-btn" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
+              <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            @for (n of pageNumbers; track n) {
+              <button class="pg-btn" [class.active]="n === currentPage" (click)="goToPage(n)">{{ n + 1 }}</button>
+            }
+            <button class="pg-btn" [disabled]="currentPage === totalPages - 1" (click)="goToPage(currentPage + 1)">
+              <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+            <button class="pg-btn" [disabled]="currentPage === totalPages - 1" (click)="goToPage(totalPages - 1)">
+              <span class="material-symbols-rounded">last_page</span>
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+</div>
+
+<!-- ── Assign KPI Modal ──────────────────────────────────────────────── -->
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeAssign()">
+    <div class="modal-panel" (click)="$event.stopPropagation()" [formGroup]="assignForm">
+
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span class="material-symbols-rounded">assignment_ind</span>
+          Assign KPI
+        </h2>
+        <button class="icon-btn" (click)="closeAssign()">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- KPI selection -->
+        <div class="form-group">
+          <label class="form-label">KPI Definition <span class="required">*</span></label>
+          @if (kpisLoading()) {
+            <div class="form-input" style="color:var(--text-muted)">Loading KPIs…</div>
+          } @else {
+            <select class="form-input" [class.invalid]="fieldError('kpiDefinitionId')"
+              formControlName="kpiDefinitionId">
+              <option [ngValue]="null">— Select a KPI —</option>
+              @for (k of kpis(); track k.id) {
+                <option [ngValue]="k.id">{{ k.name }}{{ k.code ? ' (' + k.code + ')' : '' }}</option>
+              }
+            </select>
+          }
+          @if (fieldError('kpiDefinitionId')) {
+            <span class="form-error">Please select a KPI</span>
+          }
+        </div>
+
+        <!-- Assignee type + assignee -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Assign To <span class="required">*</span></label>
+            <select class="form-input" formControlName="assigneeType"
+              (change)="onAssigneeTypeChange()">
+              <option value="EMPLOYEE">Employee</option>
+              <option value="DEPARTMENT">Department</option>
+              <option value="DIVISION">Division</option>
+              <option value="MUNICIPALITY">Municipality</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:2">
+            <label class="form-label">{{ assigneeTypeValue === 'MUNICIPALITY' ? 'Municipality (auto)' : assigneeTypeValue === 'DEPARTMENT' ? 'Department' : assigneeTypeValue === 'DIVISION' ? 'Division' : 'Employee' }} <span class="required">*</span></label>
+            @if (assigneeTypeValue === 'EMPLOYEE') {
+              <select class="form-input" [class.invalid]="fieldError('assigneeId')" formControlName="assigneeId">
+                <option [ngValue]="null">— Select employee —</option>
+                @for (e of employees(); track e.id) {
+                  <option [ngValue]="e.id">{{ e.firstName }} {{ e.lastName }}</option>
+                }
+              </select>
+            } @else if (assigneeTypeValue === 'DEPARTMENT') {
+              <select class="form-input" [class.invalid]="fieldError('assigneeId')" formControlName="assigneeId">
+                <option [ngValue]="null">— Select department —</option>
+                @for (d of departments(); track d.id) {
+                  <option [ngValue]="d.id">{{ d.name }}</option>
+                }
+              </select>
+            } @else if (assigneeTypeValue === 'DIVISION') {
+              <select class="form-input" [class.invalid]="fieldError('assigneeId')" formControlName="assigneeId">
+                <option [ngValue]="null">— Select division —</option>
+                @for (v of divisions(); track v.id) {
+                  <option [ngValue]="v.id">{{ v.name }}</option>
+                }
+              </select>
+            } @else {
+              <!-- MUNICIPALITY — no assignee selector needed, set 1 -->
+              <input class="form-input" value="All Municipality" readonly style="background:var(--gray-50);color:var(--text-muted)" />
+            }
+            @if (fieldError('assigneeId') && assigneeTypeValue !== 'MUNICIPALITY') {
+              <span class="form-error">Please select an assignee</span>
+            }
+          </div>
+        </div>
+
+        <!-- Period -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Period Type</label>
+            <select class="form-input" formControlName="periodType" (change)="onPeriodTypeChange()">
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="ANNUALLY">Annually</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Year <span class="required">*</span></label>
+            <input class="form-input" type="number" formControlName="periodYear"
+              [class.invalid]="fieldError('periodYear')" placeholder="e.g. 2026" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">{{ periodNumberLabel }} <span class="required">*</span></label>
+            <input class="form-input" type="number" formControlName="periodNumber"
+              min="1" [max]="periodNumberMax"
+              [class.invalid]="fieldError('periodNumber')"
+              [readonly]="assignForm.get('periodType')?.value === 'ANNUALLY'" />
+          </div>
+        </div>
+
+        <!-- Target + Weight + Due Date -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Target Value <span class="required">*</span></label>
+            <input class="form-input" type="number" formControlName="targetValue"
+              [class.invalid]="fieldError('targetValue')" placeholder="e.g. 95" />
+            @if (fieldError('targetValue')) {
+              <span class="form-error">Target value is required</span>
+            }
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Weight (%)</label>
+            <input class="form-input" type="number" min="0" max="100" formControlName="weight"
+              placeholder="e.g. 20" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Due Date</label>
+            <input class="form-input" type="date" formControlName="dueDate" />
+          </div>
+        </div>
+
+        <!-- Initial Status -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Initial Status</label>
+            <select class="form-input" formControlName="status">
+              <option value="ACTIVE">Active</option>
+              <option value="DRAFT">Draft</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:2"></div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-input" formControlName="notes" rows="2"
+            placeholder="Optional notes about this assignment…"></textarea>
+        </div>
+
+      </div><!-- /modal-body -->
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeAssign()" [disabled]="isSaving()">Cancel</button>
+        <button class="btn-primary" (click)="saveAssignment()" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="material-symbols-rounded spin">progress_activity</span>
+            Saving…
+          } @else {
+            <span class="material-symbols-rounded">assignment_ind</span>
+            Assign KPI
+          }
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

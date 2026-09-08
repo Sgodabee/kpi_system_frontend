@@ -1,0 +1,131 @@
+<div class="login-page">
+
+  <!-- ══ Left Panel ══════════════════════════════════════════ -->
+  <div class="login-left">
+    <div class="login-left-content">
+
+      <!-- Logo -->
+      <div class="ll-logo">
+        <span class="material-symbols-rounded" style="font-size:28px;color:#fff;">bar_chart</span>
+      </div>
+      <h1 class="ll-system">KPI Management System</h1>
+      <p  class="ll-tagline">Measure. Track. Excel.</p>
+
+      <!-- Floating stat cards -->
+      <div class="ll-stats">
+        <div class="ll-stat-card d1">
+          <span class="ll-stat-value">91.4%</span>
+          <span class="ll-stat-label">Overall Performance</span>
+        </div>
+        <div class="ll-stat-card d2">
+          <span class="ll-stat-value">2,864</span>
+          <span class="ll-stat-label">Active Employees</span>
+        </div>
+        <div class="ll-stat-card d3">
+          <span class="ll-stat-value">14</span>
+          <span class="ll-stat-label">Departments</span>
+        </div>
+        <div class="ll-stat-card d4">
+          <span class="ll-stat-value">12,463</span>
+          <span class="ll-stat-label">Active KPIs</span>
+        </div>
+      </div>
+
+    </div>
+    <p class="ll-footer">© {{ currentYear }} Municipality KPI System. All rights reserved.</p>
+  </div>
+
+  <!-- ══ Right Panel ═════════════════════════════════════════ -->
+  <div class="login-right">
+    <div class="login-card">
+
+      <!-- Brand header -->
+      <div class="lc-header">
+        <div class="lc-icon">
+          <span class="material-symbols-rounded" style="font-size:24px;color:white;">bar_chart</span>
+        </div>
+        <div>
+          <h2 class="lc-title">Welcome back</h2>
+          <p  class="lc-sub">Sign in to your account to continue</p>
+        </div>
+      </div>
+
+      <!-- Error -->
+      @if (errorMessage()) {
+        <div class="lc-error" role="alert">
+          <span class="material-symbols-rounded" style="font-size:18px;flex-shrink:0;">error</span>
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <!-- Form -->
+      <form class="lc-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+        <div class="lc-field">
+          <label class="lc-label" for="email">Email Address</label>
+          <div class="lc-input-wrap" [class.invalid]="email.invalid && email.touched">
+            <span class="material-symbols-rounded lc-field-icon">email</span>
+            <input
+              id="email" type="email"
+              class="lc-input"
+              formControlName="email"
+              placeholder="Enter your email address"
+              autocomplete="email"
+            />
+          </div>
+          @if (email.invalid && email.touched && email.errors?.['required']) {
+            <span class="lc-error-text">Email address is required.</span>
+          }
+          @if (email.invalid && email.touched && email.errors?.['email']) {
+            <span class="lc-error-text">Please enter a valid email address.</span>
+          }
+        </div>
+
+        <div class="lc-field">
+          <label class="lc-label" for="password">Password</label>
+          <div class="lc-input-wrap" [class.invalid]="password.invalid && password.touched">
+            <span class="material-symbols-rounded lc-field-icon">lock</span>
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              class="lc-input"
+              formControlName="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button" class="lc-pw-toggle"
+              (click)="showPassword.update(v => !v)"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            >
+              <span class="material-symbols-rounded" style="font-size:19px;">
+                {{ showPassword() ? 'visibility_off' : 'visibility' }}
+              </span>
+            </button>
+          </div>
+          @if (password.invalid && password.touched && password.errors?.['required']) {
+            <span class="lc-error-text">Password is required.</span>
+          }
+          @if (password.invalid && password.touched && password.errors?.['minlength']) {
+            <span class="lc-error-text">Password must be at least 6 characters.</span>
+          }
+        </div>
+
+        <button type="submit" class="lc-submit" [disabled]="isLoading()">
+          @if (isLoading()) {
+            <span class="lc-spinner"></span>
+            Signing in…
+          } @else {
+            <span class="material-symbols-rounded" style="font-size:18px;">login</span>
+            Sign In
+          }
+        </button>
+
+      </form>
+
+      <p class="lc-help">Having trouble? Contact your system administrator.</p>
+
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,268 @@
+<div class="org-page page-enter">
+
+  @if (isLoading()) {
+    <div>
+      <div class="skeleton" style="height:100px;border-radius:14px;margin-bottom:16px"></div>
+      <div class="skeleton" style="height:80px;border-radius:14px;margin-bottom:16px"></div>
+      <div class="skeleton" style="height:280px;border-radius:14px"></div>
+    </div>
+  }
+
+  @if (!isLoading() && error()) {
+    <div class="info-card"><div class="error-state">
+      <span class="material-symbols-rounded">error</span>
+      <h3>{{ error() }}</h3>
+      <button class="btn-secondary" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> Go Back
+      </button>
+    </div></div>
+  }
+
+  @if (!isLoading() && !error() && assignment()) {
+
+    <!-- Breadcrumb -->
+    <div class="detail-nav">
+      <button class="back-btn" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> Back to Assignments
+      </button>
+      <div class="pg-breadcrumb" style="margin:0">
+        <a routerLink="/assignments">Assignments</a>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <span>{{ assignment()!.kpiName }}</span>
+      </div>
+    </div>
+
+    <!-- Assignment header -->
+    <div class="assnd-hero">
+      <div class="assnd-hero-left">
+        <div class="assnd-icon">
+          <span class="material-symbols-rounded" style="font-size:26px;color:#2563eb">task_alt</span>
+        </div>
+        <div>
+          <div class="assnd-category">{{ assignment()!.categoryName ?? 'KPI Assignment' }}</div>
+          <h1 class="detail-hero-name" style="font-size:1.375rem">{{ assignment()!.kpiName }}</h1>
+          @if (assignment()!.kpiCode) {
+            <div class="kpi-code" style="margin-top:4px">{{ assignment()!.kpiCode }}</div>
+          }
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            @if (assignment()!.employeeName) {
+              <span class="badge badge-gray">
+                <span class="material-symbols-rounded" style="font-size:13px">person</span>
+                {{ assignment()!.employeeName }}
+              </span>
+            }
+            @if (assignment()!.departmentName) {
+              <span class="badge badge-gray">{{ assignment()!.departmentName }}</span>
+            }
+            <span class="badge {{ statusBadge(assignment()!.status) }}">{{ assignment()!.status | titlecase }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="assnd-actions">
+        @if (canActivate) {
+          <button class="btn-primary" [disabled]="actionBusy()" (click)="activate()">
+            <span class="material-symbols-rounded">play_arrow</span>
+            Activate
+          </button>
+        }
+        @if (canComplete) {
+          <button class="btn-primary" [disabled]="actionBusy()" (click)="complete()" style="background:var(--success);border-color:var(--success)">
+            <span class="material-symbols-rounded">check_circle</span>
+            Mark Complete
+          </button>
+        }
+        @if (canCancel) {
+          <button class="btn-secondary" [disabled]="actionBusy()" (click)="cancel()" style="border-color:var(--danger-border);color:var(--danger)">
+            <span class="material-symbols-rounded">cancel</span>
+            Cancel Assignment
+          </button>
+        }
+        @if (isCancelled) {
+          <div class="rejection-note">
+            <span class="material-symbols-rounded" style="color:var(--danger);font-size:16px">info</span>
+            <span>This assignment has been cancelled.</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Workflow timeline -->
+    <div class="info-card">
+      <div class="info-card-title">Workflow Progress</div>
+      <div class="workflow-timeline">
+        @for (step of workflowSteps; track step.status; let last = $last) {
+          <div class="wf-step" [class.done]="step.done" [class.active]="step.active">
+            <div class="wf-icon-wrap">
+              <span class="material-symbols-rounded wf-icon">{{ step.icon }}</span>
+            </div>
+            <span class="wf-label">{{ step.label }}</span>
+          </div>
+          @if (!last) {
+            <div class="wf-connector" [class.done]="step.done"></div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Key metrics -->
+    <div class="assnd-metrics">
+      <div class="metric-card">
+        <span class="material-symbols-rounded metric-icon blue">flag</span>
+        <div class="metric-val">{{ assignment()!.targetValue ?? '—' }}</div>
+        <div class="metric-lbl">Target {{ assignment()!.unit ? '(' + assignment()!.unit + ')' : '' }}</div>
+      </div>
+      <div class="metric-card">
+        <span class="material-symbols-rounded metric-icon green">done_all</span>
+        <div class="metric-val">{{ assignment()!.actualValue ?? '—' }}</div>
+        <div class="metric-lbl">Actual</div>
+      </div>
+      <div class="metric-card">
+        <span class="material-symbols-rounded metric-icon {{ achievementColor(assignment()!.achievementPct) }}">trending_up</span>
+        <div class="metric-val score-chip {{ achievementColor(assignment()!.achievementPct) }}" style="font-size:1.375rem">
+          {{ assignment()!.achievementPct != null ? (assignment()!.achievementPct | number:'1.0-0') + '%' : '—' }}
+        </div>
+        <div class="metric-lbl">Achievement</div>
+      </div>
+      @if (assignment()!.weight) {
+        <div class="metric-card">
+          <span class="material-symbols-rounded metric-icon purple">scale</span>
+          <div class="metric-val">{{ assignment()!.weight }}%</div>
+          <div class="metric-lbl">Weight</div>
+        </div>
+      }
+      @if (assignment()!.score != null) {
+        <div class="metric-card">
+          <span class="material-symbols-rounded metric-icon green">star</span>
+          <div class="metric-val score-chip {{ achievementColor(assignment()!.score) }}" style="font-size:1.375rem">
+            {{ assignment()!.score | number:'1.0-1' }}
+          </div>
+          <div class="metric-lbl">Score</div>
+        </div>
+      }
+      @if (assignment()!.dueDate) {
+        <div class="metric-card">
+          <span class="material-symbols-rounded metric-icon orange">calendar_month</span>
+          <div class="metric-val" style="font-size:1.0625rem">{{ assignment()!.dueDate | date:'dd MMM yyyy' }}</div>
+          <div class="metric-lbl">Due Date</div>
+        </div>
+      }
+    </div>
+
+    <!-- Tabs -->
+    <div class="info-card" style="padding:0;overflow:hidden">
+      <div class="tab-bar" style="padding:0 20px">
+        <button class="tab-btn" [class.active]="activeTab() === 'overview'" (click)="activeTab.set('overview')">
+          <span class="material-symbols-rounded">info</span> Details
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'evidence'" (click)="activeTab.set('evidence')">
+          <span class="material-symbols-rounded">attach_file</span>
+          Evidence @if (assignment()!.evidenceCount) { ({{ assignment()!.evidenceCount }}) }
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'comments'" (click)="activeTab.set('comments')">
+          <span class="material-symbols-rounded">comment</span> Comments
+        </button>
+      </div>
+
+      @if (activeTab() === 'overview') {
+        <div class="tab-content">
+          <div class="profile-overview-grid">
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">Assignment Info</div>
+              <div class="info-row"><span class="info-label">KPI</span>
+                <span class="info-value">{{ assignment()!.kpiName ?? assignment()!.kpiDefinitionName ?? '—' }}</span></div>
+              @if (assignment()!.kpiCode ?? assignment()!.kpiDefinitionCode) {
+                <div class="info-row"><span class="info-label">KPI Code</span>
+                  <span class="info-value">{{ assignment()!.kpiCode ?? assignment()!.kpiDefinitionCode }}</span></div>
+              }
+              <div class="info-row"><span class="info-label">Assignee Type</span>
+                <span class="info-value">{{ assignment()!.assigneeType | titlecase }}</span></div>
+              @if (assignment()!.employeeName) {
+                <div class="info-row"><span class="info-label">Employee</span>
+                  <span class="info-value">{{ assignment()!.employeeName }}</span></div>
+              } @else if (assignment()!.assigneeType !== 'EMPLOYEE') {
+                <div class="info-row"><span class="info-label">Assignee ID</span>
+                  <span class="info-value">{{ assignment()!.assigneeId }}</span></div>
+              }
+              @if (assignment()!.departmentName) {
+                <div class="info-row"><span class="info-label">Department</span>
+                  <span class="info-value">{{ assignment()!.departmentName }}</span></div>
+              }
+              @if (assignment()!.divisionName) {
+                <div class="info-row"><span class="info-label">Division</span>
+                  <span class="info-value">{{ assignment()!.divisionName }}</span></div>
+              }
+              @if (assignment()!.cycleName) {
+                <div class="info-row"><span class="info-label">Cycle</span>
+                  <span class="info-value">{{ assignment()!.cycleName }}</span></div>
+              }
+              @if (assignment()!.financialYear) {
+                <div class="info-row"><span class="info-label">Financial Year</span>
+                  <span class="info-value">{{ assignment()!.financialYear }}</span></div>
+              }
+              @if (assignment()!.fromTemplateName) {
+                <div class="info-row"><span class="info-label">Template</span>
+                  <span class="info-value">{{ assignment()!.fromTemplateName }}</span></div>
+              }
+            </div>
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">Timeline</div>
+              @if (assignment()!.periodType) {
+                <div class="info-row"><span class="info-label">Period</span>
+                  <span class="info-value">{{ assignment()!.periodType | titlecase }}
+                    @if (assignment()!.periodYear) { {{ assignment()!.periodYear }} }
+                    @if (assignment()!.periodNumber) { — Q{{ assignment()!.periodNumber }} }
+                  </span></div>
+              }
+              @if (assignment()!.assignedDate || assignment()!.createdAt) {
+                <div class="info-row"><span class="info-label">Assigned</span>
+                  <span class="info-value">{{ (assignment()!.assignedDate ?? assignment()!.createdAt) | date:'dd MMM yyyy' }}</span></div>
+              }
+              @if (assignment()!.dueDate) {
+                <div class="info-row"><span class="info-label">Due Date</span>
+                  <span class="info-value">{{ assignment()!.dueDate | date:'dd MMM yyyy' }}</span></div>
+              }
+              @if (assignment()!.updatedAt) {
+                <div class="info-row"><span class="info-label">Last Updated</span>
+                  <span class="info-value">{{ assignment()!.updatedAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
+              }
+              @if (assignment()!.submittedDate) {
+                <div class="info-row"><span class="info-label">Submitted</span>
+                  <span class="info-value">{{ assignment()!.submittedDate | date:'dd MMM yyyy' }}</span></div>
+              }
+              @if (assignment()!.reviewedDate) {
+                <div class="info-row"><span class="info-label">Reviewed</span>
+                  <span class="info-value">{{ assignment()!.reviewedDate | date:'dd MMM yyyy' }}</span></div>
+              }
+              @if (assignment()!.reviewerName) {
+                <div class="info-row"><span class="info-label">Reviewer</span>
+                  <span class="info-value">{{ assignment()!.reviewerName }}</span></div>
+              }
+              @if (assignment()!.assignedByEmail) {
+                <div class="info-row"><span class="info-label">Assigned By</span>
+                  <span class="info-value">{{ assignment()!.assignedByEmail }}</span></div>
+              }
+              @if (assignment()!.notes) {
+                <div class="info-row"><span class="info-label">Notes</span>
+                  <span class="info-value">{{ assignment()!.notes }}</span></div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (activeTab() === 'evidence' || activeTab() === 'comments') {
+        <div class="tab-content">
+          <div class="empty-state">
+            <span class="material-symbols-rounded">{{ activeTab() === 'evidence' ? 'attach_file' : 'comment' }}</span>
+            <h3>{{ activeTab() === 'evidence' ? 'Evidence' : 'Comments' }}</h3>
+            <p>Available in Sprint F5 — Performance Capture.</p>
+            <span class="badge badge-primary">Sprint F5</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+

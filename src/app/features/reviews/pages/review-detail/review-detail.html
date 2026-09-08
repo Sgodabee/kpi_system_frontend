@@ -1,0 +1,81 @@
+@if (isLoading()) {
+  <div class="rd-state"><span class="spinner"></span>Loading…</div>
+} @else if (error()) {
+  <div class="rd-state rd-error">{{ error() }}</div>
+} @else if (review()) {
+
+<div class="rd-page">
+  <nav class="rd-breadcrumb">
+    <a routerLink="/reviews">Reviews</a>
+    <span class="material-symbols-rounded">chevron_right</span>
+    <span>{{ review()!.employeeName }} — Detail</span>
+  </nav>
+
+  <div class="rd-layout">
+    <aside class="rd-aside">
+      <div class="rd-card ec-card">
+        <div class="ec-avatar">{{ review()!.employeeName.slice(0,2).toUpperCase() }}</div>
+        <h2 class="ec-name">{{ review()!.employeeName }}</h2>
+        <p class="ec-sub">{{ review()!.departmentName }}</p>
+        @if (review()!.positionTitle) { <p class="ec-sub">{{ review()!.positionTitle }}</p> }
+      </div>
+
+      <div class="rd-card score-card">
+        <span class="score-lbl">Overall Score</span>
+        <review-score [score]="review()!.overallScore" size="lg" />
+        @if (review()!.rating) {
+          <span class="rating-pill">{{ ratingLabel(review()!.rating) }}</span>
+        }
+      </div>
+
+      <div class="rd-card">
+        <review-workflow [currentStep]="review()!.currentStep" [status]="review()!.status" />
+      </div>
+
+      <button class="history-btn" (click)="viewHistory()">
+        <span class="material-symbols-rounded">history</span>View History
+      </button>
+    </aside>
+
+    <main class="rd-main">
+      <div class="rd-card">
+        <h3 class="rd-card-title"><span class="material-symbols-rounded">bar_chart</span>KPI Performance</h3>
+        @if ((review()!.kpiItems ?? []).length === 0) {
+          <p class="rd-empty">No KPI data.</p>
+        } @else {
+          <table class="kpi-tbl">
+            <thead><tr><th>KPI</th><th class="r">Target</th><th class="r">Actual</th><th class="r">Achievement</th><th class="r">Score</th></tr></thead>
+            <tbody>
+              @for (item of review()!.kpiItems; track item.kpiName) {
+                <tr>
+                  <td><b>{{ item.kpiName }}</b></td>
+                  <td class="r">{{ item.targetValue != null ? (item.targetValue | number:'1.0-1') + (item.unit ?? '') : '—' }}</td>
+                  <td class="r">{{ item.actualValue  != null ? (item.actualValue  | number:'1.0-1') + (item.unit ?? '') : '—' }}</td>
+                  <td class="r">
+                    @if (item.achievementPct != null) {
+                      <span class="ach" [class]="'ach-' + achievementColor(item.achievementPct)">{{ item.achievementPct | number:'1.0-1' }}%</span>
+                    } @else { — }
+                  </td>
+                  <td class="r fw">{{ item.score != null ? (item.score | number:'1.0-1') + '%' : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <div class="rd-card"><evidence-panel [items]="review()!.evidence ?? []" /></div>
+      <div class="rd-card"><review-comments [items]="review()!.comments ?? []" [readonly]="true" /></div>
+
+      @if (review()!.reviewerComment) {
+        <div class="rd-card">
+          <h3 class="rd-card-title"><span class="material-symbols-rounded">rate_review</span>Reviewer Comment</h3>
+          <p class="rd-comment">{{ review()!.reviewerComment }}</p>
+        </div>
+      }
+    </main>
+  </div>
+</div>
+
+}
+

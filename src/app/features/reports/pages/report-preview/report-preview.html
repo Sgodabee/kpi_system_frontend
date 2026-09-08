@@ -1,0 +1,291 @@
+<!-- ── Toolbar (hidden when printing) ───────────────────────────────────────── -->
+<div class="print-toolbar no-print">
+  <button class="tb-btn tb-back" (click)="goBack()">
+    <span class="material-symbols-rounded">arrow_back</span>
+    Back to Reports
+  </button>
+  <div class="tb-center">
+    <span class="material-symbols-rounded" style="color:#2563eb">description</span>
+    <strong>Report Preview</strong>
+  </div>
+  <button class="tb-btn tb-print" (click)="printReport()">
+    <span class="material-symbols-rounded">print</span>
+    Print / Save PDF
+  </button>
+</div>
+
+<!-- ── Loading ───────────────────────────────────────────────────────────────── -->
+@if (isLoading()) {
+  <div class="preview-loading no-print">
+    <span class="material-symbols-rounded spin">progress_activity</span>
+    <span>Loading report data…</span>
+  </div>
+}
+
+<!-- ── Error ─────────────────────────────────────────────────────────────────── -->
+@if (!isLoading() && error()) {
+  <div class="preview-error no-print">
+    <span class="material-symbols-rounded">error</span>
+    <p>{{ error() }}</p>
+    <button class="tb-btn tb-back" (click)="goBack()">
+      <span class="material-symbols-rounded">arrow_back</span>Back
+    </button>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════════════ -->
+<!-- THE REPORT                                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════════════════ -->
+@if (!isLoading() && !error()) {
+<div class="report-page">
+
+  <!-- ── Report Header ──────────────────────────────────────────────────────────── -->
+  <div class="rpt-header">
+    <div class="rpt-header-brand">
+      <div class="rpt-logo-block">
+        <span class="material-symbols-rounded rpt-logo-icon">bar_chart</span>
+      </div>
+      <div class="rpt-header-titles">
+        <div class="rpt-org-name">Municipal KPI Management System</div>
+        <div class="rpt-report-name">Employee Performance Report</div>
+      </div>
+    </div>
+    <div class="rpt-header-meta">
+      <div class="rpt-meta-row">
+        <span class="rpt-meta-label">Financial Year</span>
+        <span class="rpt-meta-val">{{ financialYear }}</span>
+      </div>
+      @if (period) {
+        <div class="rpt-meta-row">
+          <span class="rpt-meta-label">Period</span>
+          <span class="rpt-meta-val">{{ period }}</span>
+        </div>
+      }
+      <div class="rpt-meta-row">
+        <span class="rpt-meta-label">Generated</span>
+        <span class="rpt-meta-val">{{ generatedAt | date:'d MMM yyyy, HH:mm' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Colour Band ────────────────────────────────────────────────────────────── -->
+  <div class="rpt-band"></div>
+
+  <!-- ── Employee Information ───────────────────────────────────────────────────── -->
+  <div class="rpt-section">
+    <div class="section-heading">
+      <span class="material-symbols-rounded sh-icon">person</span>
+      Employee Information
+    </div>
+    <div class="emp-card">
+      <!-- Avatar -->
+      <div class="emp-avatar {{ ratingClass }}">{{ empInitials }}</div>
+
+      <!-- Details -->
+      <div class="emp-details">
+        <div class="emp-fullname">{{ employee()?.fullName ?? (employee()?.firstName + ' ' + employee()?.lastName) }}</div>
+        <div class="emp-detail-grid">
+          <div class="emp-detail-item">
+            <span class="edl">Employee Number</span>
+            <span class="edv">{{ employee()?.employeeNumber ?? '—' }}</span>
+          </div>
+          <div class="emp-detail-item">
+            <span class="edl">Department</span>
+            <span class="edv">{{ employee()?.departmentName ?? '—' }}</span>
+          </div>
+          <div class="emp-detail-item">
+            <span class="edl">Division</span>
+            <span class="edv">{{ employee()?.divisionName ?? '—' }}</span>
+          </div>
+          <div class="emp-detail-item">
+            <span class="edl">Position</span>
+            <span class="edv">{{ employee()?.positionName ?? employee()?.positionTitle ?? '—' }}</span>
+          </div>
+          <div class="emp-detail-item">
+            <span class="edl">Email</span>
+            <span class="edv">{{ employee()?.email ?? '—' }}</span>
+          </div>
+          <div class="emp-detail-item">
+            <span class="edl">Employment Status</span>
+            <span class="edv">{{ employee()?.status ?? '—' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score summary -->
+      <div class="emp-score-panel">
+        <div class="score-circle-wrap">
+          <div class="score-circle {{ ratingClass }}">
+            @if (overallScore != null) {
+              <span class="sc-value">{{ overallScore | number:'1.1-1' }}</span>
+              <span class="sc-max">/ 5.0</span>
+            } @else {
+              <span class="sc-value" style="font-size:1.4rem">N/A</span>
+            }
+          </div>
+        </div>
+        <div class="rating-badge {{ ratingClass }}">{{ ratingLabel }}</div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track">
+            <div class="score-bar-fill {{ ratingClass }}" [style.width]="scorePercent + '%'"></div>
+          </div>
+          <span class="score-bar-pct">{{ scorePercent | number:'1.0-0' }}%</span>
+        </div>
+        <div class="score-stats-row">
+          <div class="score-stat">
+            <span class="ss-val">{{ kpiRows().length }}</span>
+            <span class="ss-lbl">Total KPIs</span>
+          </div>
+          <div class="score-stat">
+            <span class="ss-val">{{ completedKpis }}</span>
+            <span class="ss-lbl">Reported</span>
+          </div>
+          <div class="score-stat">
+            <span class="ss-val">{{ totalWeight }}%</span>
+            <span class="ss-lbl">Total Weight</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── KPI Performance Detail ─────────────────────────────────────────────────── -->
+  <div class="rpt-section">
+    <div class="section-heading">
+      <span class="material-symbols-rounded sh-icon">bar_chart</span>
+      KPI Performance Detail
+    </div>
+
+    @if (kpiRows().length === 0) {
+      <div class="kpi-empty">No KPI assignments found for this employee and year.</div>
+    } @else {
+      <table class="kpi-table">
+        <thead>
+          <tr>
+            <th class="col-code">Code</th>
+            <th class="col-name">KPI Name</th>
+            <th class="col-unit">Unit</th>
+            <th class="col-num">Target</th>
+            <th class="col-num">Actual</th>
+            <th class="col-ach">Achievement</th>
+            <th class="col-score">Score</th>
+            <th class="col-weight">Weight</th>
+            <th class="col-status">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of kpiRows(); track row.kpiCode) {
+            <tr class="kpi-row">
+              <td class="col-code mono">{{ row.kpiCode }}</td>
+              <td class="col-name">{{ row.kpiName }}</td>
+              <td class="col-unit center">{{ row.unit || '—' }}</td>
+              <td class="col-num right">{{ row.target | number:'1.0-2' }}</td>
+              <td class="col-num right">
+                {{ row.actual != null ? (row.actual | number:'1.0-2') : '—' }}
+              </td>
+              <td class="col-ach">
+                @if (row.achievementPct != null) {
+                  <div class="ach-wrap">
+                    <div class="ach-track">
+                      <div class="ach-fill"
+                           [style.width]="achCapped(row.achievementPct) + '%'"
+                           [style.background]="achColor(row.achievementPct)">
+                      </div>
+                    </div>
+                    <span class="ach-label" [style.color]="achColor(row.achievementPct)">
+                      {{ row.achievementPct | number:'1.0-1' }}%
+                    </span>
+                  </div>
+                } @else {
+                  <span class="no-data">—</span>
+                }
+              </td>
+              <td class="col-score center">
+                @if (row.score != null) {
+                  <span class="score-badge" [style.background]="achColor(row.score * 20)">
+                    {{ row.score | number:'1.1-1' }}
+                  </span>
+                } @else {
+                  <span class="no-data">—</span>
+                }
+              </td>
+              <td class="col-weight center">
+                @if (row.weight) { {{ row.weight }}% } @else { — }
+              </td>
+              <td class="col-status">
+                <span class="st-badge {{ statusClass(row.status) }}">{{ statusLabel(row.status) }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="kpi-total">
+            <td colspan="6" class="total-label">Weighted Average Score</td>
+            <td class="col-score center total-score">
+              @if (overallScore != null) {
+                <span class="score-badge {{ ratingClass }}">{{ overallScore | number:'1.1-1' }}</span>
+              } @else { — }
+            </td>
+            <td class="col-weight center total-score">{{ totalWeight }}%</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    }
+  </div>
+
+  <!-- ── Rating Scale Key ───────────────────────────────────────────────────────── -->
+  <div class="rpt-section rpt-section--sm">
+    <div class="section-heading">
+      <span class="material-symbols-rounded sh-icon">legend_toggle</span>
+      Rating Scale
+    </div>
+    <div class="rating-scale-row">
+      <div class="rs-item"><span class="rs-dot r-outstanding"></span><strong>4.5 – 5.0</strong> Outstanding</div>
+      <div class="rs-item"><span class="rs-dot r-exceeds"></span><strong>3.5 – 4.4</strong> Exceeds Expectations</div>
+      <div class="rs-item"><span class="rs-dot r-meets"></span><strong>2.5 – 3.4</strong> Meets Expectations</div>
+      <div class="rs-item"><span class="rs-dot r-needs"></span><strong>1.5 – 2.4</strong> Needs Improvement</div>
+      <div class="rs-item"><span class="rs-dot r-unacceptable"></span><strong>0.0 – 1.4</strong> Unacceptable</div>
+    </div>
+  </div>
+
+  <!-- ── Declaration ────────────────────────────────────────────────────────────── -->
+  <div class="rpt-section rpt-section--sm">
+    <div class="declaration-box">
+      <p class="decl-text">
+        This report has been generated by the Municipal KPI Management System. The information contained herein
+        reflects the performance data captured for the specified employee during the review period.
+      </p>
+      <div class="sig-row">
+        <div class="sig-block">
+          <div class="sig-line"></div>
+          <div class="sig-label">Employee Signature</div>
+          <div class="sig-date">Date: ____________________</div>
+        </div>
+        <div class="sig-block">
+          <div class="sig-line"></div>
+          <div class="sig-label">Line Manager Signature</div>
+          <div class="sig-date">Date: ____________________</div>
+        </div>
+        <div class="sig-block">
+          <div class="sig-line"></div>
+          <div class="sig-label">HR Officer Signature</div>
+          <div class="sig-date">Date: ____________________</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Footer ─────────────────────────────────────────────────────────────────── -->
+  <div class="rpt-footer">
+    <div class="rpt-footer-left">
+      <span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle">bar_chart</span>
+      Municipal KPI Management System
+    </div>
+    <div class="rpt-footer-center">CONFIDENTIAL — FOR OFFICIAL USE ONLY</div>
+    <div class="rpt-footer-right">Generated: {{ generatedAt | date:'d MMMM yyyy' }}</div>
+  </div>
+
+</div>
+}
+

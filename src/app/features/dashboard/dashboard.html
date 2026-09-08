@@ -1,0 +1,395 @@
+<!-- ══════════════════════════════════════════════════════════
+     EMPLOYEE DASHBOARD
+     ══════════════════════════════════════════════════════════ -->
+@if (dashboardType === 'employee') {
+<div class="dash page-enter">
+
+  <!-- Greeting -->
+  <div class="dash-greeting">
+    <div>
+      <p class="greeting-sub">{{ currentPeriod }}</p>
+      <h1 class="greeting-title">{{ greeting }}, {{ firstName }} 👋</h1>
+      <p class="greeting-desc">Here's how your KPIs are performing this cycle.</p>
+    </div>
+    <div class="greeting-score-ring">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+        @if (!dataLoaded) {
+          <!-- Loading shimmer ring -->
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#dbeafe" stroke-width="10"
+            stroke-dasharray="60 279.3" stroke-linecap="round" transform="rotate(-90 60 60)">
+            <animateTransform attributeName="transform" type="rotate" from="270 60 60" to="630 60 60" dur="1.2s" repeatCount="indefinite"/>
+          </circle>
+        } @else {
+          <circle cx="60" cy="60" r="54" fill="none"
+            stroke="url(#empGauge)" stroke-width="10"
+            stroke-dasharray="339.3"
+            [attr.stroke-dashoffset]="gaugeOffset(overallScore)"
+            stroke-linecap="round"
+            transform="rotate(-90 60 60)"
+            style="transition: stroke-dashoffset 1.5s cubic-bezier(0.25,1,0.5,1);"/>
+        }
+        <defs>
+          <linearGradient id="empGauge" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#2563eb"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+          </linearGradient>
+        </defs>
+        @if (dataLoaded) {
+          <text x="60" y="58" text-anchor="middle" font-size="20" font-weight="800" fill="#0f172a">{{ overallScore | number:'1.0-1' }}%</text>
+          <text x="60" y="74" text-anchor="middle" font-size="9"  font-weight="500" fill="#64748b">SCORE</text>
+        } @else {
+          <text x="60" y="65" text-anchor="middle" font-size="10" fill="#94a3b8">Loading…</text>
+        }
+      </svg>
+    </div>
+  </div>
+
+  <!-- KPI stat cards -->
+  <div class="stat-grid-3">
+    <div class="stat-card color-blue d1">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">task</span></div>
+      <div class="stat-card-value">{{ dataLoaded ? totalKpis : '—' }}</div>
+      <div class="stat-card-label">My KPIs</div>
+    </div>
+    <div class="stat-card color-green d2">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">check_circle</span></div>
+      <div class="stat-card-value">{{ dataLoaded ? submittedKpis : '—' }}</div>
+      <div class="stat-card-label">Submitted</div>
+    </div>
+    <div class="stat-card color-orange d3">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">pending_actions</span></div>
+      <div class="stat-card-value">{{ dataLoaded ? pendingKpis : '—' }}</div>
+      <div class="stat-card-label">Pending</div>
+    </div>
+  </div>
+
+  <!-- Bottom row -->
+  <div class="dash-bottom-row">
+
+    <!-- Performance -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="material-symbols-rounded panel-icon">trending_up</span>
+        <h3 class="panel-title">My Performance</h3>
+      </div>
+      <div class="perf-score-row">
+        <span class="perf-number">{{ overallScore | number:'1.0-1' }}%</span>
+        <span class="badge" [class]="scoreBadge(overallScore)">
+          {{ overallScore >= 75 ? 'On Track' : overallScore >= 60 ? 'Average' : overallScore === 0 && !dataLoaded ? 'Loading…' : 'Needs Attention' }}
+        </span>
+      </div>
+      <div class="perf-bar-wrap">
+        <div class="score-bar" style="height:14px">
+          <div class="score-bar-fill blue" [style.width]="overallScore + '%'"></div>
+        </div>
+        <span class="perf-pct">{{ overallScore | number:'1.0-1' }}%</span>
+      </div>
+      <div class="perf-legend">
+        <span class="perf-leg-item green">▮ Excellent ≥ 90%</span>
+        <span class="perf-leg-item blue">▮ Good ≥ 75%</span>
+        <span class="perf-leg-item orange">▮ Average ≥ 60%</span>
+        <span class="perf-leg-item red">▮ Poor &lt; 60%</span>
+      </div>
+    </div>
+
+    <!-- Deadlines -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="material-symbols-rounded panel-icon">calendar_month</span>
+        <h3 class="panel-title">Upcoming Deadlines</h3>
+      </div>
+      <div class="deadline-list">
+        @for (d of upcomingDeadlines; track d.label) {
+          <div class="deadline-item" [class.urgent]="d.urgent">
+            <div class="deadline-date">{{ d.date }}</div>
+            <div class="deadline-label">{{ d.label }}</div>
+            @if (d.urgent) { <span class="badge badge-danger">Urgent</span> }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Activity -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="material-symbols-rounded panel-icon">history</span>
+        <h3 class="panel-title">Recent Activity</h3>
+      </div>
+      <div class="activity-list">
+        @for (a of recentActivity; track a.text) {
+          <div class="activity-item">
+            <div class="activity-dot {{ a.type }}">
+              <span class="material-symbols-rounded" style="font-size:14px;">{{ a.icon }}</span>
+            </div>
+            <div class="activity-content">
+              <p class="activity-text">{{ a.text }}</p>
+              <span class="activity-time">{{ a.time }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+</div>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     MANAGER DASHBOARD
+     ══════════════════════════════════════════════════════════ -->
+@if (dashboardType === 'manager') {
+<div class="dash page-enter">
+
+  <!-- Header -->
+  <div class="dash-header-row">
+    <div>
+      <p class="greeting-sub">{{ currentPeriod }}</p>
+      <h1 class="greeting-title">Team Performance</h1>
+      <p class="greeting-desc">{{ greeting }}, {{ firstName }}.
+        @if (pendingReviews > 0) {
+          You have <strong>{{ pendingReviews }}</strong> submission{{ pendingReviews === 1 ? '' : 's' }} awaiting review.
+          <a routerLink="/reviews" class="dash-link">Go to Reviews →</a>
+        } @else {
+          No pending reviews at this time.
+        }
+      </p>
+    </div>
+    <div class="team-score-badge">
+      <div class="tsb-value">{{ teamScore }}%</div>
+      <div class="tsb-label">Team Score</div>
+    </div>
+  </div>
+
+  <!-- Team stat cards -->
+  <div class="stat-grid-4">
+    <div class="stat-card color-blue d1">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">people</span></div>
+      <div class="stat-card-value">{{ teamStatCards[0].value }}</div>
+      <div class="stat-card-label">Team Members</div>
+    </div>
+    <div class="stat-card color-orange d2">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">pending_actions</span></div>
+      <div class="stat-card-value">{{ pendingReviews }}</div>
+      <div class="stat-card-label">Pending Review</div>
+    </div>
+    <div class="stat-card color-red d3">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">schedule</span></div>
+      <div class="stat-card-value">{{ overdueReviews }}</div>
+      <div class="stat-card-label">Overdue</div>
+    </div>
+    <div class="stat-card color-red d4">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">cancel</span></div>
+      <div class="stat-card-value">{{ reviewStats()?.rejected ?? teamStatCards[3].value }}</div>
+      <div class="stat-card-label">Rejected</div>
+    </div>
+  </div>
+
+  <!-- Team table -->
+  <div class="panel">
+      <div class="panel-header">
+        <span class="material-symbols-rounded panel-icon">people</span>
+        <h3 class="panel-title">Team Performance Overview</h3>
+        <a routerLink="/reviews" class="panel-action">View All Reviews</a>
+      </div>
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Score</th>
+            <th>Progress</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of teamMembers; track m.name) {
+            <tr class="dash-table-row">
+              <td>
+                <div class="emp-cell">
+                  <div class="emp-avatar">{{ m.name.split(' ')[0][0] }}{{ m.name.split(' ')[1][0] }}</div>
+                  <span class="emp-name">{{ m.name }}</span>
+                </div>
+              </td>
+              <td><span class="emp-dept">{{ m.dept }}</span></td>
+              <td><span class="score-num {{ scoreStatus(m.score) }}">{{ m.score }}%</span></td>
+              <td style="min-width:120px">
+                <div class="score-bar">
+                  <div class="score-bar-fill {{ scoreColor(m.score) }}" [style.width]="m.score + '%'"></div>
+                </div>
+              </td>
+              <td>
+                <span class="badge {{ scoreBadge(m.score) }}">
+                  {{ m.status | titlecase }}
+                </span>
+              </td>
+              <td>
+                <button class="table-action-btn" title="Review">
+                  <span class="material-symbols-rounded" style="font-size:17px;">rate_review</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     EXECUTIVE DASHBOARD
+     ══════════════════════════════════════════════════════════ -->
+@if (dashboardType === 'executive') {
+<div class="dash page-enter">
+
+  <!-- Hero Header -->
+  <div class="exec-hero">
+    <div class="exec-hero-left">
+      <div class="exec-badge">
+        <span class="material-symbols-rounded" style="font-size:15px;">verified</span>
+        {{ currentPeriod }}
+      </div>
+      <h1 class="exec-title">Municipal Performance</h1>
+      <p class="exec-sub">{{ greeting }}, {{ firstName }}. Overall performance is on track.</p>
+    </div>
+    <div class="exec-gauge-wrap">
+      <svg viewBox="0 0 140 140" width="140" height="140" class="exec-gauge">
+        <circle cx="70" cy="70" r="58" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
+        <circle cx="70" cy="70" r="58" fill="none"
+          stroke="url(#execGauge)" stroke-width="12"
+          stroke-dasharray="364.4"
+          [attr.stroke-dashoffset]="gaugeOffset(municipalScore) * (364.4/339.3)"
+          stroke-linecap="round"
+          transform="rotate(-90 70 70)"
+          style="transition: stroke-dashoffset 1.8s cubic-bezier(0.25,1,0.5,1);"/>
+        <defs>
+          <linearGradient id="execGauge" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#60a5fa"/>
+            <stop offset="100%" stop-color="#a78bfa"/>
+          </linearGradient>
+        </defs>
+        <text x="70" y="68" text-anchor="middle" font-size="22" font-weight="900" fill="white">{{ municipalScore }}%</text>
+        <text x="70" y="84" text-anchor="middle" font-size="10" font-weight="500" fill="rgba(255,255,255,0.6)">PERFORMANCE</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Exec stat cards -->
+  <div class="stat-grid-5">
+    <div class="stat-card color-purple d1">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">account_tree</span></div>
+      <div class="stat-card-value">{{ execStatCards[0].value }}</div>
+      <div class="stat-card-label">Departments</div>
+    </div>
+    <div class="stat-card color-blue d2">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">people</span></div>
+      <div class="stat-card-value">{{ execStatCards[1].value }}</div>
+      <div class="stat-card-label">Employees</div>
+    </div>
+    <div class="stat-card color-green d3">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">task_alt</span></div>
+      <div class="stat-card-value">{{ execStatCards[2].value }}</div>
+      <div class="stat-card-label">Active KPIs</div>
+    </div>
+    <div class="stat-card color-orange d4">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">pending_actions</span></div>
+      <div class="stat-card-value">{{ pendingReviews }}</div>
+      <div class="stat-card-label">Pending Reviews</div>
+    </div>
+    <div class="stat-card color-red d5">
+      <div class="stat-card-icon"><span class="material-symbols-rounded">priority_high</span></div>
+      <div class="stat-card-value">{{ overdueReviews }}</div>
+      <div class="stat-card-label">Overdue Reviews</div>
+    </div>
+  </div>
+
+  <div class="exec-bottom-row">
+
+    <!-- Department performance chart -->
+    <div class="panel panel-wide">
+      <div class="panel-header">
+        <span class="material-symbols-rounded panel-icon">analytics</span>
+        <h3 class="panel-title">Department Performance</h3>
+        <span class="panel-period">{{ currentPeriod }}</span>
+      </div>
+      <div class="dept-chart">
+        @if (isLoading()) {
+          @for (s of [1,2,3,4,5]; track s) {
+            <div class="skeleton-row" style="margin-bottom:8px;height:22px;border-radius:6px"></div>
+          }
+        } @else if (displayDepts.length === 0) {
+          <div class="empty-state" style="padding:24px 0">
+            <span class="material-symbols-rounded" style="font-size:32px;color:var(--text-muted)">analytics</span>
+            <p style="color:var(--text-muted);font-size:0.875rem;margin:8px 0 0">No performance data available yet.</p>
+          </div>
+        } @else {
+          @for (dept of displayDepts; track dept.name; let i = $index) {
+            <div class="dept-row" [class]="'d' + (i+1)">
+              <span class="dept-name truncate">{{ dept.name }}</span>
+              <div class="dept-bar-wrap">
+                <div class="score-bar" style="height:10px">
+                  <div class="score-bar-fill {{ dept.score > 0 ? dept.color : 'gray' }}"
+                    [style.width]="(dept.score > 0 ? dept.score : 2) + '%'">
+                  </div>
+                </div>
+              </div>
+              <span class="dept-score">{{ dept.score > 0 ? dept.score + '%' : '0%' }}</span>
+              <span class="dept-trend {{ dept.trend }}">
+                <span class="material-symbols-rounded" style="font-size:16px;">{{ trendIcon(dept.trend) }}</span>
+              </span>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Risk heatmap -->
+    <div class="panel panel-narrow">
+      <div class="panel-header">
+        <span class="material-symbols-rounded panel-icon" style="color:#ef4444">crisis_alert</span>
+        <h3 class="panel-title">Risk Overview</h3>
+      </div>
+      <div class="risk-grid-header">
+        <span></span>
+        <span class="risk-col-label">Low</span>
+        <span class="risk-col-label">Medium</span>
+        <span class="risk-col-label">High</span>
+      </div>
+      @if (riskItems.length === 0) {
+        <div class="empty-state" style="padding:20px 0">
+          <p style="color:var(--text-muted);font-size:0.8rem;text-align:center">No risk data available yet.</p>
+        </div>
+      } @else {
+        @for (item of riskItems; track item.dept) {
+          <div class="risk-row">
+            <span class="risk-dept-name">{{ item.dept }}</span>
+            <div class="risk-cell" [class.active]="item.risk === 'low'"
+              [style.background]="item.risk === 'low' ? 'rgba(16,185,129,0.15)' : 'transparent'">
+              @if (item.risk === 'low') {
+                <span class="risk-dot" style="background:#10b981"></span>
+              }
+            </div>
+            <div class="risk-cell" [class.active]="item.risk === 'medium'"
+              [style.background]="item.risk === 'medium' ? 'rgba(245,158,11,0.15)' : 'transparent'">
+              @if (item.risk === 'medium') {
+                <span class="risk-dot" style="background:#f59e0b"></span>
+              }
+            </div>
+            <div class="risk-cell" [class.active]="item.risk === 'high'"
+              [style.background]="item.risk === 'high' ? 'rgba(239,68,68,0.15)' : 'transparent'">
+              @if (item.risk === 'high') {
+                <span class="risk-dot" style="background:#ef4444"></span>
+              }
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+  </div>
+</div>
+}

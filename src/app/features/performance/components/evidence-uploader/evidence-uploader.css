@@ -1,0 +1,77 @@
+.eu-root { display: flex; flex-direction: column; gap: 12px; }
+
+/* File rows */
+.eu-existing, .eu-pending-list { display: flex; flex-direction: column; gap: 6px; }
+.eu-file {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: var(--gray-50);
+  border: 1px solid var(--border-color); border-radius: 10px;
+  transition: border-color .15s;
+}
+.eu-file:hover { border-color: var(--primary-200); }
+.eu-file.pending { background: #f0f9ff; border-color: #bae6fd; }
+.eu-file.error   { background: var(--danger-bg); border-color: var(--danger-border); }
+
+.eu-file-icon { font-size: 22px; color: var(--primary); flex-shrink: 0; }
+.eu-file.error .eu-file-icon { color: var(--danger); }
+
+.eu-file-info { flex: 1; min-width: 0; }
+.eu-file-name { display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eu-file-size { font-size: 0.75rem; color: var(--text-secondary); }
+.eu-error-msg   { font-size: 0.75rem; color: var(--danger); display: block; margin-top: 2px; }
+.eu-success-msg { font-size: 0.75rem; color: var(--success); display: block; margin-top: 2px; }
+
+/* Progress bar */
+.eu-progress-bar {
+  height: 4px; background: var(--gray-200); border-radius: 999px;
+  overflow: hidden; margin-top: 4px;
+}
+.eu-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 999px; transition: width .3s ease;
+}
+
+/* Actions */
+.eu-file-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.eu-action-btn {
+  width: 30px; height: 30px; border: none; background: none;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s; color: var(--text-secondary);
+}
+.eu-action-btn.download:hover { background: var(--primary-50); color: var(--primary); }
+.eu-action-btn.delete:hover   { background: var(--danger-bg);  color: var(--danger);  }
+
+/* Drop zone */
+.eu-dropzone {
+  border: 2px dashed var(--border-color); border-radius: 12px;
+  padding: 32px 20px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: var(--gray-50); transition: all .15s; cursor: default;
+}
+.eu-dropzone.dragging {
+  border-color: var(--primary); background: var(--primary-50);
+  box-shadow: 0 0 0 4px var(--primary-ring);
+}
+.eu-drop-icon { font-size: 40px; color: var(--text-muted); }
+.eu-dropzone.dragging .eu-drop-icon { color: var(--primary); }
+.eu-drop-text { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+.eu-drop-sub  { font-size: 0.8125rem; color: var(--text-muted); margin: 0; }
+.eu-hint      { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+
+.eu-browse-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: white; color: var(--primary);
+  border: 1.5px solid var(--primary-200); border-radius: 9px; padding: 8px 18px;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  transition: all .15s;
+}
+.eu-browse-btn:hover { background: var(--primary-50); border-color: var(--primary); }
+
+/* Error banner */
+.eu-error-banner {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--danger-bg); color: var(--danger-text);
+  border: 1px solid var(--danger-border); border-radius: 9px;
+  padding: 10px 14px; font-size: 0.8125rem;
+}
+

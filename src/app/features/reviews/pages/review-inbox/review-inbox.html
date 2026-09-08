@@ -1,0 +1,139 @@
+<div class="inbox-page">
+
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <div class="inbox-header">
+    <div class="inbox-header-left">
+      <h1 class="inbox-heading">Performance Reviews</h1>
+      <p class="inbox-sub">Review and approve employee performance submissions</p>
+    </div>
+    <div class="inbox-header-right">
+      <div class="search-box">
+        <span class="material-symbols-rounded search-icon">search</span>
+        <input class="search-input" type="text" placeholder="Search employee or department…"
+               [value]="searchText()" (input)="onSearch($event)" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stats cards ──────────────────────────────────────────── -->
+  <div class="stats-row">
+    <div class="stat-card stat-card--pending"  (click)="selectTab('PENDING')">
+      <span class="stat-icon material-symbols-rounded">pending</span>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats().pending }}</span>
+        <span class="stat-label">Pending</span>
+      </div>
+    </div>
+    <div class="stat-card stat-card--overdue"  (click)="selectTab('OVERDUE')">
+      <span class="stat-icon material-symbols-rounded">warning</span>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats().overdue }}</span>
+        <span class="stat-label">Overdue</span>
+      </div>
+    </div>
+    <div class="stat-card stat-card--complete" (click)="selectTab('APPROVED')">
+      <span class="stat-icon material-symbols-rounded">check_circle</span>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats().completed }}</span>
+        <span class="stat-label">Completed</span>
+      </div>
+    </div>
+    <div class="stat-card stat-card--rejected" (click)="selectTab('REJECTED')">
+      <span class="stat-icon material-symbols-rounded">cancel</span>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats().rejected }}</span>
+        <span class="stat-label">Rejected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────── -->
+  <div class="tabs-bar">
+    @for (tab of tabs; track tab.key) {
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === tab.key"
+                (click)="selectTab(tab.key)">
+        <span class="material-symbols-rounded">{{ tab.icon }}</span>
+        {{ tab.label }}
+        @if (tabCount(tab.key) != null) {
+          <span class="tab-count">{{ tabCount(tab.key) }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ── Error ────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner">
+      <span class="material-symbols-rounded">error</span>{{ error() }}
+      <button class="retry-btn" (click)="load()">Retry</button>
+    </div>
+  }
+
+  <!-- ── Table ────────────────────────────────────────────────── -->
+  <div class="table-card">
+    @if (isLoading()) {
+      <div class="loading-state">
+        <span class="spinner"></span>Loading reviews…
+      </div>
+    } @else if (reviews().length === 0) {
+      <div class="empty-state">
+        <span class="material-symbols-rounded empty-icon">rate_review</span>
+        <p>No reviews found for this filter.</p>
+      </div>
+    } @else {
+      <table class="inbox-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Score</th>
+            <th>Submitted</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of reviews(); track r.id) {
+            <tr class="inbox-row" (click)="openReview(r)">
+              <td class="td-employee">
+                <div class="emp-cell">
+                  <span class="emp-avatar">{{ r.employeeName.slice(0,2).toUpperCase() }}</span>
+                  <div class="emp-info">
+                    <span class="emp-name">{{ r.employeeName }}</span>
+                    @if (r._kpiName) {
+                      <span class="emp-title">{{ r._kpiName }}</span>
+                    } @else if (r.positionTitle) {
+                      <span class="emp-title">{{ r.positionTitle }}</span>
+                    }
+                  </div>
+                </div>
+              </td>
+              <td>{{ r.departmentName || '—' }}</td>
+              <td>
+                @if (r.overallScore != null) {
+                  <span class="score-chip" [class]="'score-' + scoreColor(r.overallScore)">
+                    {{ r.overallScore | number:'1.0-1' }}%
+                  </span>
+                } @else { <span class="text-muted">—</span> }
+              </td>
+              <td class="text-muted">{{ formatDate(r.submittedAt) }}</td>
+              <td><span class="badge" [class]="statusBadge(r.status)">{{ statusLabel(r.status) }}</span></td>
+              <td>
+                <button class="action-btn" (click)="$event.stopPropagation(); openReview(r)">
+                  Review
+                  <span class="material-symbols-rounded">arrow_forward</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (total > reviews().length) {
+        <div class="pagination-hint">Showing {{ reviews().length }} of {{ total }} reviews</div>
+      }
+    }
+  </div>
+
+</div>
+

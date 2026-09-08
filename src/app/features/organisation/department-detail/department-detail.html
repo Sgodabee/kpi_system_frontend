@@ -1,0 +1,700 @@
+<div class="org-page page-enter">
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="detail-skeleton">
+      <div class="skeleton" style="height:180px;border-radius:16px;margin-bottom:20px"></div>
+      <div class="skeleton" style="height:48px;border-radius:12px;margin-bottom:20px"></div>
+      <div class="skeleton" style="height:320px;border-radius:12px"></div>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (!isLoading() && error()) {
+    <div class="info-card">
+      <div class="error-state">
+        <span class="material-symbols-rounded">error</span>
+        <h3>{{ error() }}</h3>
+        <button class="btn-secondary" (click)="goBack()">
+          <span class="material-symbols-rounded">arrow_back</span> Go Back
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (!isLoading() && !error() && dept()) {
+
+    <!-- Back + breadcrumb -->
+    <div class="detail-nav">
+      <button class="back-btn" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span>
+        Back to Departments
+      </button>
+      <div class="pg-breadcrumb" style="margin:0">
+        <a routerLink="/departments">Organisation</a>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <span>{{ dept()!.name }}</span>
+      </div>
+    </div>
+
+    <!-- Department Hero -->
+    <div class="detail-hero">
+      <div class="detail-hero-left">
+        <div class="detail-hero-icon">
+          <span class="material-symbols-rounded" style="font-size:32px;color:#2563eb">account_tree</span>
+        </div>
+        <div>
+          <h1 class="detail-hero-name">{{ dept()!.name }}</h1>
+          @if (dept()!.code) {
+            <span class="dept-card-code" style="margin-top:4px">{{ dept()!.code }}</span>
+          }
+          @if (dept()!.description) {
+            <p class="detail-hero-desc">{{ dept()!.description }}</p>
+          }
+          @if (dept()!.directorName) {
+            <p class="detail-hero-director">
+              <span class="material-symbols-rounded" style="font-size:16px">manage_accounts</span>
+              Director: <strong>{{ dept()!.directorName }}</strong>
+            </p>
+          }
+        </div>
+      </div>
+      <div class="detail-hero-stats">
+        <div class="hero-stat">
+          @if (empsLoading()) {
+            <span class="hero-stat-val" style="color:var(--text-muted)">…</span>
+          } @else {
+            <span class="hero-stat-val">{{ dept()!.employeeCount ?? totalEmpEls }}</span>
+          }
+          <span class="hero-stat-lbl">Employees</span>
+        </div>
+        <div class="hero-stat">
+          @if (!divisionsLoaded()) {
+            <span class="hero-stat-val" style="color:var(--text-muted)">…</span>
+          } @else {
+            <span class="hero-stat-val">{{ dept()!.divisionCount ?? divisions().length }}</span>
+          }
+          <span class="hero-stat-lbl">Divisions</span>
+        </div>
+        <div class="hero-stat">
+          @if (kpisLoading()) {
+            <span class="hero-stat-val" style="color:var(--text-muted)">…</span>
+          } @else {
+            <span class="hero-stat-val">{{ dept()!.activeKpiCount ?? kpiSummary().active }}</span>
+          }
+          <span class="hero-stat-lbl">Active KPIs</span>
+        </div>
+        @if (dept()!.performanceScore != null) {
+          <div class="hero-stat">
+            <span class="hero-stat-val score-chip {{ scoreClass(dept()!.performanceScore) }}">
+              {{ dept()!.performanceScore }}%
+            </span>
+            <span class="hero-stat-lbl">Performance</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="info-card" style="padding:0;overflow:hidden">
+      <div class="tab-bar" style="padding:0 20px">
+        @for (tab of tabs; track tab.key) {
+          <button class="tab-btn" [class.active]="activeTab() === tab.key" (click)="setTab(tab.key)">
+            <span class="material-symbols-rounded">{{ tab.icon }}</span>
+            {{ tab.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Tab: Overview -->
+      @if (activeTab() === 'overview') {
+        <div class="tab-content">
+          <div class="overview-grid">
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">Department Details</div>
+              <div class="info-row">
+                <span class="info-label">Name</span>
+                <span class="info-value">{{ dept()!.name }}</span>
+              </div>
+              @if (dept()!.code) {
+                <div class="info-row">
+                  <span class="info-label">Code</span>
+                  <span class="info-value">{{ dept()!.code }}</span>
+                </div>
+              }
+              <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="info-value">
+                  <span class="badge {{ dept()!.status === 'INACTIVE' ? 'badge-gray' : 'badge-success' }}">
+                    {{ dept()!.status ?? 'Active' }}
+                  </span>
+                </span>
+              </div>
+              @if (dept()!.directorName) {
+                <div class="info-row">
+                  <span class="info-label">Director</span>
+                  <span class="info-value">{{ dept()!.directorName }}</span>
+                </div>
+              }
+            </div>
+
+            <div>
+              <div class="info-card-title" style="padding:20px 22px 0">Divisions ({{ divisions().length }})</div>
+              @if (!divisionsLoaded()) {
+                <div style="padding:20px">
+                  @for (s of [1,2,3]; track s) {
+                    <div class="skeleton-row" style="margin-bottom:8px"></div>
+                  }
+                </div>
+              } @else if (divisions().length === 0) {
+                <div class="empty-state" style="padding:32px 20px">
+                  <span class="material-symbols-rounded" style="font-size:32px">account_tree</span>
+                  <p>No divisions created yet.</p>
+                </div>
+              } @else {
+                <div class="division-list">
+                  @for (div of divisions(); track div.id) {
+                    <div class="division-item">
+                      <div class="division-icon">
+                        <span class="material-symbols-rounded" style="font-size:16px">folder</span>
+                      </div>
+                      <div class="division-info">
+                        <span class="division-name">{{ div.name }}</span>
+                        @if (div.managerName) {
+                          <span class="division-manager">{{ div.managerName }}</span>
+                        }
+                      </div>
+                      <div class="division-meta">
+                        <span class="badge badge-primary">
+                          {{ (div.employeeCount ?? divisionEmpCount(div.id)) }} emp
+                        </span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Tab: Divisions -->
+      @if (activeTab() === 'divisions') {
+        <div class="tab-content">
+          <div class="tab-section-header">
+            <span class="tab-section-title">Divisions ({{ divisions().length }})</span>
+            @if (canManage) {
+              <button class="btn-primary" style="padding:7px 14px;font-size:0.8125rem" (click)="openAddDivision()">
+                <span class="material-symbols-rounded" style="font-size:16px">add</span>
+                Add Division
+              </button>
+            }
+          </div>
+          @if (divisions().length === 0 && divisionsLoaded()) {
+            <div class="empty-state">
+              <span class="material-symbols-rounded">account_tree</span>
+              <h3>No divisions</h3>
+              <p>This department has no divisions yet.</p>
+              @if (canManage) {
+                <button class="btn-primary" (click)="openAddDivision()">
+                  <span class="material-symbols-rounded">add</span>
+                  Add First Division
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="division-grid">
+              @for (div of divisions(); track div.id) {
+                <div class="division-card">
+                  <div class="division-card-head">
+                    <div class="division-card-icon">
+                      <span class="material-symbols-rounded">folder</span>
+                    </div>
+                    @if (canManage) {
+                      <button class="icon-btn" title="Add Position" (click)="openAddPosition(div); $event.stopPropagation()">
+                        <span class="material-symbols-rounded" style="font-size:18px">add_circle</span>
+                      </button>
+                    }
+                  </div>
+                  <h4 class="division-card-name">{{ div.name }}</h4>
+                  @if (div.code) {
+                    <span class="dept-card-code">{{ div.code }}</span>
+                  }
+                  @if (div.managerName) {
+                    <p class="division-card-mgr">
+                      <span class="material-symbols-rounded" style="font-size:13px">person</span>
+                      {{ div.managerName }}
+                    </p>
+                  }
+                  <div class="division-card-stats">
+                    <span class="badge badge-primary">
+                      {{ (div.employeeCount ?? divisionEmpCount(div.id)) }} employees
+                    </span>
+                    @if (div.performanceScore != null) {
+                      <span class="score-chip {{ scoreClass(div.performanceScore) }}" style="font-size:0.8rem">
+                        {{ div.performanceScore }}%
+                      </span>
+                    }
+                  </div>
+
+                  <!-- Positions list -->
+                  @if (positionsForDiv(div.id).length > 0) {
+                    <div class="position-list">
+                      <div class="position-list-title">
+                        <span class="material-symbols-rounded" style="font-size:14px;color:var(--primary)">work</span>
+                        Positions ({{ positionsForDiv(div.id).length }})
+                      </div>
+                      @for (pos of positionsForDiv(div.id); track pos.id) {
+                        <div class="position-item">
+                          <span class="position-name">{{ pos.name }}</span>
+                          @if (pos.gradeLevel) {
+                            <span class="position-grade">{{ pos.gradeLevel }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    @if (canManage) {
+                      <button class="add-position-hint" (click)="openAddPosition(div); $event.stopPropagation()">
+                        <span class="material-symbols-rounded" style="font-size:14px">add</span>
+                        Add positions
+                      </button>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Tab: Employees -->
+      @if (activeTab() === 'employees') {
+        <div>
+          @if (empsLoading()) {
+            <div style="padding:20px">
+              @for (s of [1,2,3,4,5]; track s) {
+                <div class="skeleton-row" style="margin-bottom:4px"></div>
+              }
+            </div>
+          } @else if (employees.length === 0) {
+            <div class="empty-state">
+              <span class="material-symbols-rounded">people</span>
+              <h3>No employees</h3>
+              <p>No employees found in this department.</p>
+            </div>
+          } @else {
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Position</th>
+                    <th>Division</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (emp of employees; track emp.id) {
+                    <tr (click)="viewEmployee(emp.id)">
+                      <td>
+                        <div class="row-person">
+                          <div class="row-avatar">{{ getInitials(emp.fullName ?? (emp.firstName + ' ' + emp.lastName)) }}</div>
+                          <div>
+                            <div class="row-name">{{ emp.fullName }}</div>
+                            <div class="row-email">{{ emp.email }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{{ emp.positionTitle ?? '—' }}</td>
+                      <td>{{ emp.divisionName ?? '—' }}</td>
+                      <td>
+                        @if (emp.performanceScore != null) {
+                          <div style="display:flex;align-items:center;gap:8px;min-width:100px">
+                            <div class="score-bar" style="height:6px">
+                              <div class="score-bar-fill {{ scoreColor(emp.performanceScore) }}"
+                                   [style.width]="emp.performanceScore + '%'"></div>
+                            </div>
+                            <span class="score-chip {{ scoreClass(emp.performanceScore) }}" style="font-size:0.8rem">
+                              {{ emp.performanceScore }}%
+                            </span>
+                          </div>
+                        } @else { <span style="color:var(--text-muted)">—</span> }
+                      </td>
+                      <td>
+                        <span class="badge {{ statusBadge(emp.status) }}">{{ emp.status | titlecase }}</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (totalEmpPages > 1) {
+              <div class="pagination">
+                <span class="pg-info">
+                  {{ totalEmpEls }} employees · Page {{ empCurrentPage + 1 }} of {{ totalEmpPages }}
+                </span>
+                <div class="pg-btns">
+                  <button class="pg-btn" [disabled]="empCurrentPage === 0" (click)="loadEmployees(empCurrentPage - 1)">
+                    <span class="material-symbols-rounded">chevron_left</span>
+                  </button>
+                  @for (n of pageNumbers; track n) {
+                    <button class="pg-btn" [class.active]="n === empCurrentPage" (click)="loadEmployees(n)">
+                      {{ n + 1 }}
+                    </button>
+                  }
+                  <button class="pg-btn" [disabled]="empCurrentPage === totalEmpPages - 1" (click)="loadEmployees(empCurrentPage + 1)">
+                    <span class="material-symbols-rounded">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- Tab: KPIs -->
+      @if (activeTab() === 'kpis') {
+        <div class="tab-content">
+          @if (kpisLoading()) {
+            <div style="padding:20px">
+              @for (s of [1,2,3,4]; track s) {
+                <div class="skeleton-row" style="margin-bottom:8px"></div>
+              }
+            </div>
+          } @else {
+
+            <!-- KPI summary chips + capture button -->
+            <div class="tab-section-header" style="padding:0 0 12px 0">
+              <div class="kpi-summary-row" style="margin:0">
+                <div class="kpi-chip">
+                  <span class="kpi-chip-val">{{ kpiSummary().total }}</span>
+                  <span class="kpi-chip-lbl">Total</span>
+                </div>
+                <div class="kpi-chip kpi-chip--active">
+                  <span class="kpi-chip-val">{{ kpiSummary().active }}</span>
+                  <span class="kpi-chip-lbl">Active</span>
+                </div>
+                <div class="kpi-chip kpi-chip--draft">
+                  <span class="kpi-chip-val">{{ kpiSummary().draft }}</span>
+                  <span class="kpi-chip-lbl">Draft</span>
+                </div>
+                <div class="kpi-chip kpi-chip--completed">
+                  <span class="kpi-chip-val">{{ kpiSummary().completed }}</span>
+                  <span class="kpi-chip-lbl">Completed</span>
+                </div>
+              </div>
+              @if (kpiSummary().active > 0) {
+                <a [routerLink]="['/performance/new']" [queryParams]="{ departmentId: deptId }"
+                   class="btn-primary" style="padding:7px 14px;font-size:0.8125rem;text-decoration:none;display:flex;align-items:center;gap:6px">
+                  <span class="material-symbols-rounded" style="font-size:16px">add_chart</span>
+                  Capture Performance
+                </a>
+              }
+            </div>
+
+            @if (assignments().length === 0) {
+              <div class="empty-state">
+                <span class="material-symbols-rounded">task_alt</span>
+                <h3>No KPI assignments</h3>
+                <p>No KPIs have been assigned to this department yet.</p>
+              </div>
+            } @else {
+              <div class="tbl-wrap">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th>KPI</th>
+                      <th>Category</th>
+                      <th>Period</th>
+                      <th class="r">Target</th>
+                      <th class="r">Weight</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (a of assignments(); track a.id) {
+                      <tr (click)="viewAssignment(a.id)" style="cursor:pointer">
+                        <td>
+                          <div class="row-name">{{ a.kpiDefinitionName ?? a.kpiName ?? '—' }}</div>
+                          @if (a.kpiDefinitionCode ?? a.kpiCode) {
+                            <div class="row-sub"><span class="kpi-code">{{ a.kpiDefinitionCode ?? a.kpiCode }}</span></div>
+                          }
+                        </td>
+                        <td>{{ a.categoryName ?? '—' }}</td>
+                        <td>
+                          @if (a.periodType) {
+                            <span class="badge badge-gray">{{ a.periodType }}</span>
+                          }
+                          @if (a.periodYear) {
+                            <span style="font-size:.8rem;color:var(--text-muted)"> {{ a.periodYear }}</span>
+                          }
+                        </td>
+                        <td class="r">{{ a.targetValue != null ? (a.targetValue | number:'1.0-1') + (a.unit ? ' ' + a.unit : '') : '—' }}</td>
+                        <td class="r">{{ a.weight != null ? a.weight + '%' : '—' }}</td>
+                        <td><span class="badge {{ assignmentStatusBadge(a.status) }}">{{ a.status | titlecase }}</span></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- Tab: Performance -->
+      @if (activeTab() === 'performance') {
+        <div class="tab-content">
+          @if (perfLoading()) {
+            <div style="padding:20px">
+              @for (s of [1,2,3,4,5]; track s) {
+                <div class="skeleton-row" style="margin-bottom:8px"></div>
+              }
+            </div>
+          } @else {
+
+            <!-- Performance summary chips -->
+            <div class="kpi-summary-row">
+              <div class="kpi-chip">
+                <span class="kpi-chip-val">{{ perfSummary().total }}</span>
+                <span class="kpi-chip-lbl">Records</span>
+              </div>
+              <div class="kpi-chip kpi-chip--active">
+                <span class="kpi-chip-val">{{ perfSummary().approved }}</span>
+                <span class="kpi-chip-lbl">Approved</span>
+              </div>
+              <div class="kpi-chip kpi-chip--draft">
+                <span class="kpi-chip-val">{{ perfSummary().submitted }}</span>
+                <span class="kpi-chip-lbl">Submitted</span>
+              </div>
+              @if (perfSummary().avgScore != null) {
+                <div class="kpi-chip kpi-chip--score">
+                  <span class="kpi-chip-val score-chip {{ scoreClass(perfSummary().avgScore) }}">{{ perfSummary().avgScore }}%</span>
+                  <span class="kpi-chip-lbl">Avg Score</span>
+                </div>
+              }
+            </div>
+
+            @if (perfRecords().length === 0) {
+              <div class="empty-state">
+                <span class="material-symbols-rounded">trending_up</span>
+                <h3>No performance records</h3>
+                <p>No performance data found for this department.</p>
+              </div>
+            } @else {
+              <div class="tbl-wrap">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th>KPI</th>
+                      <th>Period</th>
+                      <th class="r">Target</th>
+                      <th class="r">Actual</th>
+                      <th class="r">Achievement</th>
+                      <th class="r">Score</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of perfRecords(); track r.id) {
+                      <tr>
+                        <td>
+                          <div class="row-name">{{ r.kpiName ?? r.kpiDefinitionName ?? '—' }}</div>
+                          @if (r.kpiCode) {
+                            <div class="row-sub"><span class="kpi-code">{{ r.kpiCode }}</span></div>
+                          }
+                        </td>
+                        <td>{{ r.period ?? (r.periodYear ? r.periodYear + (r.periodNumber ? '-' + r.periodNumber : '') : '—') }}</td>
+                        <td class="r">{{ r.targetValue != null ? (r.targetValue | number:'1.0-1') : '—' }}</td>
+                        <td class="r">
+                          @if (r.actualValue != null) {
+                            <strong>{{ r.actualValue | number:'1.0-1' }}</strong>
+                          } @else if (r.actualText) {
+                            {{ r.actualText }}
+                          } @else { — }
+                        </td>
+                        <td class="r">
+                          @if (r.achievementPct != null) {
+                            <span class="score-chip {{ scoreClass(r.achievementPct) }}" style="font-size:.8rem">
+                              {{ r.achievementPct | number:'1.0-0' }}%
+                            </span>
+                          } @else { — }
+                        </td>
+                        <td class="r">
+                          @if (r.score != null) {
+                            <span class="score-chip {{ scoreClass(r.score) }}" style="font-size:.8rem">
+                              {{ r.score | number:'1.0-0' }}%
+                            </span>
+                          } @else { — }
+                        </td>
+                        <td><span class="badge {{ perfStatusBadge(r.status) }}">{{ r.status | titlecase }}</span></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+</div>
+
+<!-- ── Add Position Modal ─────────────────────────────────────────────────── -->
+@if (showAddPositionModal()) {
+  <div class="modal-backdrop" (click)="closeAddPosition()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span class="material-symbols-rounded">work</span>
+          Add Position
+        </h2>
+        <button class="icon-btn" (click)="closeAddPosition()">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <form [formGroup]="positionForm" (ngSubmit)="savePosition()">
+        <div class="modal-body">
+
+          <div class="form-group" style="background:var(--primary-50);border-radius:8px;padding:10px 14px;border:1px solid var(--primary-100)">
+            <span style="font-size:0.8125rem;color:var(--primary);font-weight:600">
+              <span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle">account_tree</span>
+              Division: {{ addPositionDivisionName() }}
+            </span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex:2">
+              <label class="form-label">Position Name <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="name"
+                [class.invalid]="fieldError('name','position')"
+                placeholder="e.g. Senior Accountant" />
+              @if (fieldError('name','position')) { <span class="form-error">Required</span> }
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Code <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="code"
+                [class.invalid]="fieldError('code','position')"
+                placeholder="e.g. SA001"
+                style="text-transform:uppercase" />
+              @if (fieldError('code','position')) { <span class="form-error">Required</span> }
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Grade Level</label>
+              <input class="form-input" type="text" formControlName="gradeLevel"
+                placeholder="e.g. Grade 10" />
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label" style="flex-direction:row;align-items:center;gap:10px;display:flex;margin-top:22px">
+                <input type="checkbox" formControlName="enabled" style="width:16px;height:16px" />
+                Active
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-input" formControlName="description" rows="2"
+              placeholder="Optional description…"></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeAddPosition()" [disabled]="isSavingPosition()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="isSavingPosition()">
+            @if (isSavingPosition()) {
+              <span class="material-symbols-rounded spin">progress_activity</span>
+              Saving…
+            } @else {
+              <span class="material-symbols-rounded">add</span>
+              Create Position
+            }
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+}
+@if (showAddDivisionModal()) {
+  <div class="modal-backdrop" (click)="closeAddDivision()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span class="material-symbols-rounded">account_tree</span>
+          Add Division
+        </h2>
+        <button class="icon-btn" (click)="closeAddDivision()">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <form [formGroup]="divisionForm" (ngSubmit)="saveDivision()">
+        <div class="modal-body">
+
+          <div class="form-row">
+            <div class="form-group" style="flex:2">
+              <label class="form-label">Division Name <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="name"
+                [class.invalid]="fieldError('name')"
+                placeholder="e.g. Revenue Division" />
+              @if (fieldError('name')) {
+                <span class="form-error">Division name is required</span>
+              }
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Code <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="code"
+                [class.invalid]="fieldError('code')"
+                placeholder="e.g. REV001"
+                style="text-transform:uppercase" />
+              @if (fieldError('code')) {
+                <span class="form-error">Code is required</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-input" formControlName="description" rows="3"
+              placeholder="Optional description of this division…"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="flex-direction:row;align-items:center;gap:10px;display:flex">
+              <input type="checkbox" formControlName="enabled" style="width:16px;height:16px" />
+              Active (visible and operational)
+            </label>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeAddDivision()" [disabled]="isSavingDivision()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="isSavingDivision()">
+            @if (isSavingDivision()) {
+              <span class="material-symbols-rounded spin">progress_activity</span>
+              Saving…
+            } @else {
+              <span class="material-symbols-rounded">add</span>
+              Create Division
+            }
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+}

@@ -1,0 +1,265 @@
+<div class="org-page page-enter">
+
+  @if (isLoading()) {
+    <div>
+      <div class="skeleton" style="height:120px;border-radius:14px;margin-bottom:16px"></div>
+      <div class="skeleton" style="height:200px;border-radius:14px;margin-bottom:16px"></div>
+      <div class="skeleton" style="height:160px;border-radius:14px"></div>
+    </div>
+  }
+
+  @if (!isLoading() && error()) {
+    <div class="info-card"><div class="error-state">
+      <span class="material-symbols-rounded">error</span>
+      <h3>{{ error() }}</h3>
+      <button class="btn-secondary" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> Go Back
+      </button>
+    </div></div>
+  }
+
+  @if (!isLoading() && !error()) {
+
+    <!-- Breadcrumb -->
+    <div class="detail-nav">
+      <button class="back-btn" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> My Performance
+      </button>
+    </div>
+
+    <!-- Rejection banner (if coming back to edit) -->
+    @if (record()?.status === 'REJECTED' && record()?.reviewerComment) {
+      <div class="revision-banner">
+        <span class="material-symbols-rounded" style="font-size:22px;color:#d97706">warning</span>
+        <div>
+          <strong>Changes requested by {{ record()?.reviewerName ?? 'your manager' }}</strong>
+          <p>"{{ record()!.reviewerComment }}"</p>
+        </div>
+      </div>
+    }
+
+    <div class="capture-layout">
+
+      <!-- Left: KPI Info + Capture Form -->
+      <div class="capture-main">
+
+      <!-- Assignment selector (new capture only) -->
+      @if (isNew) {
+        <div class="info-card">
+          <div class="info-card-title">Select KPI Assignment</div>
+          @if (assignmentsLoading()) {
+            <div class="skeleton-row" style="height:40px;border-radius:8px"></div>
+          } @else if (assignments().length === 0) {
+            <div class="empty-state" style="padding:24px 0">
+              <span class="material-symbols-rounded">task_alt</span>
+              <p>No active KPI assignments found.</p>
+              <p style="font-size:.8rem;color:var(--text-muted)">
+                Go to <a routerLink="/kpi-management/assignments" style="color:var(--primary)">KPI Assignments</a>
+                to check if assignments exist, or contact your manager.
+              </p>
+            </div>
+          } @else {
+            <select class="filter-select" style="width:100%;padding:10px 12px;font-size:.9rem"
+                    [ngModel]="selectedAssignmentId()"
+                    (ngModelChange)="selectedAssignmentId.set($event ? +$event : null)">
+              <option [value]="null">— Select a KPI to capture —</option>
+              @for (a of assignments(); track a.id) {
+                <option [value]="a.id">
+                  {{ a.kpiDefinitionName ?? a.kpiName ?? 'KPI #' + a.id }}
+                  @if (a.periodType) { ({{ a.periodType }} {{ a.periodYear }}) }
+                </option>
+              }
+            </select>
+
+            <!-- Show selected KPI details inline -->
+            @if (selectedAssignment()) {
+              <div class="kpi-meta-grid" style="margin-top:14px">
+                @if (selectedAssignment()!.targetValue != null) {
+                  <div class="kpi-meta-item">
+                    <span class="kpi-meta-lbl">Target</span>
+                    <span class="kpi-meta-val">{{ selectedAssignment()!.targetValue }}{{ selectedAssignment()!.unit ? ' ' + selectedAssignment()!.unit : '' }}</span>
+                  </div>
+                }
+                @if (selectedAssignment()!.weight != null) {
+                  <div class="kpi-meta-item">
+                    <span class="kpi-meta-lbl">Weight</span>
+                    <span class="kpi-meta-val">{{ selectedAssignment()!.weight }}%</span>
+                  </div>
+                }
+                @if (selectedAssignment()!.categoryName) {
+                  <div class="kpi-meta-item">
+                    <span class="kpi-meta-lbl">Category</span>
+                    <span class="kpi-meta-val">{{ selectedAssignment()!.categoryName }}</span>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+
+        <!-- KPI Info Card (existing record) -->
+        @if (record()) {
+          <div class="info-card">
+            <div class="kpi-info-header">
+              <div>
+                @if (record()!.kpiCode) {
+                  <span class="kpi-code">{{ record()!.kpiCode }}</span>
+                }
+                <h2 class="kpi-capture-name">{{ record()!.kpiName }}</h2>
+                @if (record()!.categoryName) {
+                  <span class="badge badge-gray">{{ record()!.categoryName }}</span>
+                }
+              </div>
+            </div>
+            <div class="kpi-meta-grid">
+              @if (record()!.frequency) {
+                <div class="kpi-meta-item">
+                  <span class="kpi-meta-lbl">Frequency</span>
+                  <span class="kpi-meta-val">{{ record()!.frequency }}</span>
+                </div>
+              }
+              @if (record()!.kpiUnit) {
+                <div class="kpi-meta-item">
+                  <span class="kpi-meta-lbl">Unit</span>
+                  <span class="kpi-meta-val">{{ record()!.kpiUnit }}</span>
+                </div>
+              }
+              @if (record()!.kpiDirection) {
+                <div class="kpi-meta-item">
+                  <span class="kpi-meta-lbl">Direction</span>
+                  <span class="kpi-meta-val">{{ record()!.kpiDirection === 'HIGHER_IS_BETTER' ? 'Higher is better' : record()!.kpiDirection === 'LOWER_IS_BETTER' ? 'Lower is better' : 'Target exact' }}</span>
+                </div>
+              }
+              @if (record()!.weight != null) {
+                <div class="kpi-meta-item">
+                  <span class="kpi-meta-lbl">Weight</span>
+                  <span class="kpi-meta-val">{{ record()!.weight }}%</span>
+                </div>
+              }
+              @if (record()!.period) {
+                <div class="kpi-meta-item">
+                  <span class="kpi-meta-lbl">Period</span>
+                  <span class="kpi-meta-val">{{ record()!.period }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Performance Capture Form -->
+        <div class="info-card">
+          <div class="info-card-title">Performance Capture</div>
+
+          <!-- Target display -->
+          @if (record()?.targetValue != null) {
+            <div class="target-display">
+              <span class="target-label">Target</span>
+              <span class="target-value">{{ record()!.targetValue }}{{ record()!.kpiUnit ? ' ' + record()!.kpiUnit : '' }}</span>
+            </div>
+          }
+
+          <div class="capture-field">
+            <label class="capture-label">Actual Result *</label>
+            <kpi-value-input
+              [dataType]="dataType"
+              [value]="actualValue()"
+              [textValue]="actualText()"
+              (valueChange)="actualValue.set($event)"
+              (textValueChange)="actualText.set($event)">
+            </kpi-value-input>
+          </div>
+
+          <!-- Live score calculation -->
+          @if (achievementPct() != null && dataType !== 'TEXT' && dataType !== 'BOOLEAN') {
+            <div class="live-score">
+              <div class="live-score-item">
+                <span class="ls-label">Achievement</span>
+                <span class="ls-value {{ scoreColor }}">{{ achievementPct() }}%</span>
+              </div>
+              @if (score() != null) {
+                <div class="live-score-item">
+                  <span class="ls-label">Score</span>
+                  <span class="ls-value {{ scoreColor }}">{{ score() }}%</span>
+                </div>
+              }
+              <div class="ls-bar-wrap">
+                <div class="score-bar" style="height:10px">
+                  <div class="score-bar-fill {{ scoreColor }}"
+                    [style.width]="(achievementPct()! > 100 ? 100 : achievementPct()!) + '%'">
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Comment -->
+        <div class="info-card">
+          <div class="info-card-title">Employee Comment</div>
+          <textarea class="comment-textarea" rows="4"
+                    [ngModel]="comment()"
+                    (ngModelChange)="comment.set($event)"
+                    placeholder="Describe your performance, explain variances, or add any relevant context…">
+          </textarea>
+        </div>
+
+        <!-- Save error -->
+        @if (saveError()) {
+          <div class="eu-error-banner" style="border-radius:10px;padding:12px 16px">
+            <span class="material-symbols-rounded" style="font-size:18px">error</span>
+            {{ saveError() }}
+          </div>
+        }
+
+        <!-- Action buttons -->
+        <div class="capture-actions">
+          <button class="btn-secondary" (click)="goBack()" [disabled]="isSaving() || isSubmitting()">
+            Cancel
+          </button>
+          <div style="display:flex;gap:10px;margin-left:auto">
+            <button class="btn-secondary save-draft-btn"
+                    (click)="saveDraft()"
+                    [disabled]="isSaving() || isSubmitting() || !canSave">
+              @if (isSaving()) {
+                <span class="btn-spinner"></span>
+              } @else {
+                <span class="material-symbols-rounded" style="font-size:17px">save</span>
+              }
+              Save Draft
+            </button>
+            <button class="btn-primary submit-btn"
+                    (click)="submitRecord()"
+                    [disabled]="!isReadyToSubmit || isSaving() || isSubmitting() || !canSave">
+              @if (isSubmitting()) {
+                <span class="btn-spinner"></span>
+              } @else {
+                <span class="material-symbols-rounded" style="font-size:17px">send</span>
+              }
+              {{ record()?.status === 'REJECTED' ? 'Resubmit' : 'Submit for Review' }}
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Evidence -->
+      @if (record()) {
+        <div class="capture-sidebar">
+          <div class="info-card">
+            <div class="info-card-title">Evidence</div>
+            <evidence-uploader
+              [recordId]="record()!.id"
+              [existingEvidence]="evidence()"
+              (evidenceUploaded)="onEvidenceUploaded($event)"
+              (evidenceDeleted)="onEvidenceDeleted($event)">
+            </evidence-uploader>
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+</div>
+

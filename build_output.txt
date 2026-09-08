@@ -1,0 +1,35 @@
+> Building...
+√ Building...
+Initial chunk files | Names               |  Raw size
+chunk-RVBZG5DA.js   | -                   |   1.18 MB | 
+chunk-FZ5ARE55.js   | -                   | 256.64 kB | 
+styles.css          | styles              |  17.06 kB | 
+main.js             | main                |   9.15 kB | 
+chunk-5Y6KRV2J.js   | -                   |   5.04 kB | 
+chunk-ZHAQMTJC.js   | -                   | 277 bytes | 
+
+                    | Initial total       |   1.46 MB
+
+Lazy chunk files    | Names               |  Raw size
+chunk-H6YX7TZE.js   | -                   | 163.55 kB | 
+chunk-FWPBQHDP.js   | admin-centre        |  93.02 kB | 
+chunk-UF4UB45L.js   | review-workspace    |  87.83 kB | 
+chunk-K4SK3XDO.js   | dashboard           |  84.77 kB | 
+chunk-ICDJ6MB5.js   | performance-detail  |  83.55 kB | 
+chunk-PI45YOK6.js   | audit-trail         |  65.00 kB | 
+chunk-UPKF6JA6.js   | department-detail   |  62.67 kB | 
+chunk-TPRRJBPV.js   | performance-capture |  62.35 kB | 
+chunk-ELYP6Y3A.js   | shell               |  61.05 kB | 
+chunk-URJSASAJ.js   | report-centre       |  57.46 kB | 
+chunk-UV4Z5L4N.js   | assignment-detail   |  55.53 kB | 
+chunk-6KBNXQCS.js   | assignments         |  50.63 kB | 
+chunk-AYIUJ32S.js   | kpi-library         |  46.86 kB | 
+chunk-DSHYZWAY.js   | -                   |  46.29 kB | 
+chunk-4BSOA2VD.js   | employee-profile    |  43.83 kB | 
+...and 17 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [13.121 seconds] - 2026-08-18T11:16:19.073Z
+
+Output location: C:\Users\manga\Downloads\KPI Report\kpi-system-frontend\dist\kpi-system-frontend
+
+SUCCESS  

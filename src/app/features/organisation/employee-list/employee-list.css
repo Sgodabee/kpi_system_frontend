@@ -1,0 +1,64 @@
+.emp-table-card {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  overflow: hidden;
+}
+
+.score-cell {
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 16px; animation: fadeIn 0.15s ease;
+}
+.modal-panel {
+  background: white; border-radius: 16px;
+  width: 100%; max-width: 620px; max-height: 92vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  animation: slideUp 0.2s ease;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border-color);
+}
+.modal-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.125rem; font-weight: 700; color: var(--text-primary); margin: 0;
+}
+.modal-title .material-symbols-rounded { color: var(--primary); font-size: 22px; }
+.modal-body {
+  flex: 1; overflow-y: auto; padding: 20px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 24px; border-top: 1px solid var(--border-color);
+}
+.form-row   { display: flex; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); }
+.required   { color: var(--danger); margin-left: 2px; }
+.form-input {
+  padding: 9px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border-color); font-size: 0.875rem;
+  color: var(--text-primary); background: white; width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box;
+}
+.form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-50); }
+.form-input.invalid { border-color: var(--danger); }
+.form-error { font-size: 0.75rem; color: var(--danger); }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px; border: none;
+  background: transparent; color: var(--text-secondary);
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.icon-btn:hover { background: var(--gray-100); color: var(--primary); }
+.spin { animation: spinAnim 0.8s linear infinite; display: inline-block; }
+@keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes spinAnim { to { transform: rotate(360deg); } }

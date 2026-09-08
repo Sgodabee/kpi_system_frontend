@@ -1,0 +1,79 @@
+<header class="header">
+
+  <!-- Left: menu toggle + brand -->
+  <div class="hd-left">
+    <button class="hd-menu-btn" (click)="onMenuToggle()" aria-label="Toggle sidebar">
+      <span class="material-symbols-rounded">menu</span>
+    </button>
+    <div class="hd-title">
+      <span class="hd-title-text">KPI Management</span>
+      <span class="hd-title-sep">›</span>
+      <span class="hd-title-sub">Municipality</span>
+    </div>
+  </div>
+
+  <!-- Centre: search -->
+  <div class="hd-search-wrap" [class.open]="searchOpen()">
+    <button class="hd-search-trigger" (click)="toggleSearch()" aria-label="Search">
+      <span class="material-symbols-rounded">search</span>
+    </button>
+    <div class="hd-search-box">
+      <span class="material-symbols-rounded hd-search-icon">search</span>
+      <input
+        type="text"
+        class="hd-search-input"
+        placeholder="Search employees, KPIs, reports…"
+        [class.visible]="searchOpen()"
+      />
+      <kbd class="hd-kbd">ESC</kbd>
+    </div>
+  </div>
+
+  <!-- Right: actions -->
+  <div class="hd-right">
+
+    <!-- Notifications -->
+    <button class="hd-icon-btn" aria-label="Notifications" title="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      @if (notifCount() > 0) {
+        <span class="hd-notif-badge">{{ notifCount() }}</span>
+      }
+    </button>
+
+    <!-- User dropdown -->
+    <div class="hd-user-wrap" [class.open]="dropdownOpen()">
+      <button class="hd-user-btn" (click)="toggleDropdown()">
+        <div class="hd-avatar">{{ userInitials }}</div>
+        <div class="hd-user-info">
+          <span class="hd-user-name">{{ currentUser()?.fullName }}</span>
+          <span class="hd-user-role">{{ primaryRole }}</span>
+        </div>
+        <span class="material-symbols-rounded hd-chevron">expand_more</span>
+      </button>
+
+      @if (dropdownOpen()) {
+        <div class="hd-dropdown">
+          <div class="hd-dropdown-header">
+            <div class="hd-dropdown-avatar">{{ userInitials }}</div>
+            <div>
+              <div class="hd-dropdown-name">{{ currentUser()?.fullName }}</div>
+              <div class="hd-dropdown-email">{{ currentUser()?.email }}</div>
+            </div>
+          </div>
+          <div class="hd-dropdown-divider"></div>
+          <button class="hd-dropdown-item">
+            <span class="material-symbols-rounded">person</span> My Profile
+          </button>
+          <button class="hd-dropdown-item">
+            <span class="material-symbols-rounded">settings</span> Settings
+          </button>
+          <div class="hd-dropdown-divider"></div>
+          <button class="hd-dropdown-item danger" (click)="logout()">
+            <span class="material-symbols-rounded">logout</span> Sign Out
+          </button>
+        </div>
+      }
+    </div>
+
+  </div>
+</header>

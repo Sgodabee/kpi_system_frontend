@@ -1,0 +1,222 @@
+@if (isLoading()) {
+  <div class="ws-loading">
+    <span class="spinner"></span>Loading review…
+  </div>
+} @else if (error()) {
+  <div class="ws-error">
+    <span class="material-symbols-rounded">error</span>{{ error() }}
+    <button (click)="goBack()">← Back to Inbox</button>
+  </div>
+} @else if (review()) {
+
+<div class="ws-page">
+
+  <!-- ── Breadcrumb ──────────────────────────────────────────── -->
+  <nav class="ws-breadcrumb">
+    <a routerLink="/reviews">Reviews</a>
+    <span class="material-symbols-rounded">chevron_right</span>
+    <span>{{ review()!.employeeName }}</span>
+  </nav>
+
+  <!-- ── Two-column layout ───────────────────────────────────── -->
+  <div class="ws-layout">
+
+    <!-- ── Left column — context ───────────────────────────── -->
+    <aside class="ws-aside">
+
+      <!-- Employee card -->
+      <div class="aside-card employee-card">
+        <div class="ec-avatar">{{ review()!.employeeName.slice(0,2).toUpperCase() }}</div>
+        <div class="ec-info">
+          <h2 class="ec-name">{{ review()!.employeeName }}</h2>
+          <p class="ec-sub">{{ review()!.departmentName }}
+            @if (review()!.positionTitle) { · {{ review()!.positionTitle }} }
+          </p>
+        </div>
+        @if (review()!.dueDate) {
+          <div class="ec-due">Due {{ formatDate(review()!.dueDate) }}</div>
+        }
+      </div>
+
+      <!-- Score gauge -->
+      <div class="aside-card score-card">
+        <span class="score-label">Performance Score</span>
+        <review-score [score]="displayScore()" size="lg" />
+        @if (review()!.rating) {
+          <div class="current-rating">{{ ratingLabel(review()!.rating) }}</div>
+        }
+      </div>
+
+      <!-- Workflow stepper -->
+      <div class="aside-card">
+        <review-workflow
+          [currentStep]="workflowStep()"
+          [status]="review()!.status" />
+      </div>
+
+    </aside>
+
+    <!-- ── Right column — workspace ────────────────────────── -->
+    <main class="ws-main">
+
+      <!-- KPI Performance table -->
+      <div class="ws-card">
+        <h3 class="ws-card-title">
+          <span class="material-symbols-rounded">bar_chart</span>
+          KPI Performance
+        </h3>
+        @if (kpiTableItems().length === 0) {
+          <p class="ws-empty">No KPI data available.</p>
+        } @else {
+          <table class="kpi-table">
+            <thead>
+              <tr>
+                <th>KPI</th>
+                <th class="num-col">Target</th>
+                <th class="num-col">Actual</th>
+                <th class="num-col">Achievement</th>
+                <th class="num-col">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of kpiTableItems(); track item.kpiName) {
+                <tr>
+                  <td>
+                    <span class="kpi-name">{{ item.kpiName }}</span>
+                    @if (item.categoryName) {
+                      <span class="kpi-cat">{{ item.categoryName }}</span>
+                    }
+                  </td>
+                  <td class="num-col">
+                    {{ item.targetValue != null ? (item.targetValue | number:'1.0-1') + (item.unit ?? '') : '—' }}
+                  </td>
+                  <td class="num-col">
+                    {{ item.actualValue != null ? (item.actualValue | number:'1.0-1') + (item.unit ?? '') : '—' }}
+                  </td>
+                  <td class="num-col">
+                    @if (item.achievementPct != null) {
+                      <span class="ach-chip" [class]="'ach-' + achievementColor(item.achievementPct)">
+                        {{ item.achievementPct | number:'1.0-1' }}%
+                      </span>
+                    } @else { <span class="text-muted">—</span> }
+                  </td>
+                  <td class="num-col font-medium">
+                    {{ item.score != null ? (item.score | number:'1.0-1') + '%' : '—' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <!-- Evidence -->
+      <div class="ws-card">
+        <evidence-panel [items]="review()!.evidence ?? []" />
+      </div>
+
+      <!-- Employee comment -->
+      @if (review()!.employeeComment) {
+        <div class="ws-card">
+          <h3 class="ws-card-title">
+            <span class="material-symbols-rounded">person</span>Employee Comments
+          </h3>
+          <p class="comment-text">{{ review()!.employeeComment }}</p>
+        </div>
+      }
+
+      <!-- Comments thread -->
+      <div class="ws-card">
+        <review-comments
+          [items]="allComments()"
+          [readonly]="true" />
+      </div>
+
+      <!-- Assessment form (role-specific) — hidden once review is finalised/locked -->
+      @if ((canApprove || canReject || canRequestRevision) && !isReviewComplete()) {
+        <review-assessment
+          [suggestedRating]="suggestedRating()"
+          [roleLabel]="assessmentRoleLabel"
+          [disabled]="isSaving()" />
+
+        <div class="ws-card ws-actions-card">
+          @if (actionError()) {
+            <div class="action-error">
+              <span class="material-symbols-rounded">error</span>{{ actionError() }}
+            </div>
+          }
+          <approval-actions
+            [canApprove]="canApprove"
+            [canReject]="canReject"
+            [canRequestRevision]="canRequestRevision"
+            [isLoading]="isSaving()"
+            [approveLabel]="approveLabel"
+            (approve)="openDialog('approve')"
+            (reject)="openDialog('reject')"
+            (revision)="openDialog('revision')" />
+        </div>
+      } @else if (isReviewComplete()) {
+        <div class="ws-card" style="text-align:center;padding:28px 20px">
+          <span class="material-symbols-rounded" style="font-size:2.5rem;color:#22c55e">verified</span>
+          <p style="font-weight:600;margin:8px 0 4px;color:#15803d">Review Finalised</p>
+          <p style="color:var(--text-muted);font-size:0.875rem">This review has been completed. No further actions are required.</p>
+        </div>
+      }
+
+    </main>
+  </div>
+
+</div>
+
+}
+
+<!-- ── Confirmation dialog ──────────────────────────────────── -->
+@if (dialogMode()) {
+  <div class="dialog-backdrop" (click)="closeDialog()">
+    <div class="dialog-box" (click)="$event.stopPropagation()">
+
+      @if (dialogMode() === 'approve') {
+        <h2 class="dialog-title dialog-title--approve">
+          <span class="material-symbols-rounded">check_circle</span>Confirm Approval
+        </h2>
+        <p class="dialog-body">Are you sure you want to approve this performance review?
+          The workflow will advance to the next stage.</p>
+      } @else if (dialogMode() === 'reject') {
+        <h2 class="dialog-title dialog-title--reject">
+          <span class="material-symbols-rounded">cancel</span>Reject Review
+        </h2>
+        <label class="dialog-label">Reason for rejection <span class="required">*</span></label>
+        <textarea class="dialog-textarea" rows="4"
+                  placeholder="Describe why this review is being rejected…"
+                  [(ngModel)]="dialogReason"></textarea>
+      } @else if (dialogMode() === 'revision') {
+        <h2 class="dialog-title dialog-title--revision">
+          <span class="material-symbols-rounded">undo</span>Request Revision
+        </h2>
+        <label class="dialog-label">What needs to be revised? <span class="required">*</span></label>
+        <textarea class="dialog-textarea" rows="4"
+                  placeholder="Describe the changes the employee needs to make…"
+                  [(ngModel)]="dialogReason"></textarea>
+      }
+
+      @if (actionError()) {
+        <div class="dialog-error">{{ actionError() }}</div>
+      }
+
+      <div class="dialog-footer">
+        <button class="dialog-btn dialog-btn--cancel" (click)="closeDialog()">Cancel</button>
+        <button class="dialog-btn"
+                [class]="dialogMode() === 'approve' ? 'dialog-btn--approve'
+                        : dialogMode() === 'reject'  ? 'dialog-btn--reject'
+                        : 'dialog-btn--revision'"
+                [disabled]="isSaving()"
+                (click)="confirmAction()">
+          @if (isSaving()) { <span class="btn-spinner"></span> }
+          {{ dialogMode() === 'approve' ? 'Approve' : dialogMode() === 'reject' ? 'Reject' : 'Send for Revision' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+

@@ -1,0 +1,53 @@
+@if (isLoading()) {
+  <div class="rh-state"><span class="spinner"></span>Loading history…</div>
+} @else if (error()) {
+  <div class="rh-state rh-error">{{ error() }}</div>
+} @else {
+
+<div class="rh-page">
+  <nav class="rh-breadcrumb">
+    <a routerLink="/reviews">Reviews</a>
+    <span class="material-symbols-rounded">chevron_right</span>
+    <a [routerLink]="['/reviews', reviewId]">Review #{{ reviewId }}</a>
+    <span class="material-symbols-rounded">chevron_right</span>
+    <span>History</span>
+  </nav>
+
+  <h1 class="rh-heading">
+    <span class="material-symbols-rounded">history</span>Workflow History
+  </h1>
+
+  @if (history().length === 0) {
+    <div class="rh-empty">No workflow events recorded yet.</div>
+  } @else {
+    <div class="timeline">
+      @for (item of history(); track item.timestamp) {
+        <div class="tl-item">
+          <div class="tl-indicator">
+            <span class="tl-icon material-symbols-rounded" [class]="actionClass(item.action)">
+              {{ actionIcon(item.action) }}
+            </span>
+            <span class="tl-line"></span>
+          </div>
+          <div class="tl-card">
+            <div class="tl-meta">
+              <span class="tl-step">{{ item.stepLabel }}</span>
+              <span class="tl-action" [class]="actionClass(item.action)">{{ item.action | titlecase }}</span>
+              <span class="tl-time">{{ formatDate(item.timestamp) }}</span>
+            </div>
+            <div class="tl-actor">
+              <span class="material-symbols-rounded">person</span>
+              {{ item.actorName }} @if (item.actorRole) { · <em>{{ item.actorRole }}</em> }
+            </div>
+            @if (item.comment) {
+              <p class="tl-comment">"{{ item.comment }}"</p>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+}
+

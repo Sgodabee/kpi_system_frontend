@@ -1,0 +1,200 @@
+<div class="org-page page-enter">
+
+  @if (isLoading()) {
+    <div>
+      <div class="skeleton" style="height:180px;border-radius:16px;margin-bottom:20px"></div>
+      <div class="skeleton" style="height:48px;border-radius:12px;margin-bottom:20px"></div>
+      <div class="skeleton" style="height:300px;border-radius:12px"></div>
+    </div>
+  }
+
+  @if (!isLoading() && error()) {
+    <div class="info-card"><div class="error-state">
+      <span class="material-symbols-rounded">error</span>
+      <h3>{{ error() }}</h3>
+      <button class="btn-secondary" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> Go Back
+      </button>
+    </div></div>
+  }
+
+  @if (!isLoading() && !error() && kpi()) {
+
+    <!-- Breadcrumb -->
+    <div class="detail-nav">
+      <button class="back-btn" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> Back to KPI Library
+      </button>
+      <div class="pg-breadcrumb" style="margin:0">
+        <a routerLink="/kpis">KPI Library</a>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <span>{{ kpi()!.name }}</span>
+      </div>
+    </div>
+
+    <!-- KPI Hero -->
+    <div class="kpi-hero">
+      <div class="kpi-hero-left">
+        <div class="kpi-hero-icon">
+          <span class="material-symbols-rounded" style="font-size:30px;color:#7c3aed">task_alt</span>
+        </div>
+        <div>
+          @if (kpi()!.code) {
+            <div class="kpi-code" style="margin-bottom:8px">{{ kpi()!.code }}</div>
+          }
+          <h1 class="detail-hero-name">{{ kpi()!.name }}</h1>
+          <div class="kpi-hero-tags">
+            @if (kpi()!.categoryName) {
+              <span class="badge badge-gray">{{ kpi()!.categoryName }}</span>
+            }
+            @if (kpi()!.type) {
+              <span class="badge {{ typeBadge(kpi()!.type) }}">{{ typeLabel(kpi()!.type) }}</span>
+            }
+            <span class="badge {{ statusBadge(kpi()!.status) }}">{{ kpi()!.status | titlecase }}</span>
+          </div>
+          @if (kpi()!.description) {
+            <p class="detail-hero-desc">{{ kpi()!.description }}</p>
+          }
+        </div>
+      </div>
+
+      <!-- Key stats -->
+      <div class="detail-hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-val">{{ kpi()!.targetValue ?? '—' }}</span>
+          <span class="hero-stat-lbl">Target</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-val">{{ kpi()!.weight != null ? kpi()!.weight + '%' : '—' }}</span>
+          <span class="hero-stat-lbl">Weight</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-val">{{ kpi()!.unit ?? '—' }}</span>
+          <span class="hero-stat-lbl">Unit</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-val">{{ kpi()!.frequency ?? '—' }}</span>
+          <span class="hero-stat-lbl">Frequency</span>
+        </div>
+        @if (kpi()!.assignmentCount != null) {
+          <div class="hero-stat">
+            <span class="hero-stat-val">{{ kpi()!.assignmentCount }}</span>
+            <span class="hero-stat-lbl">Assigned</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Tab card -->
+    <div class="info-card" style="padding:0;overflow:hidden">
+      <div class="tab-bar" style="padding:0 20px">
+        @for (tab of tabs; track tab.key) {
+          <button class="tab-btn" [class.active]="activeTab() === tab.key" (click)="setTab(tab.key)">
+            <span class="material-symbols-rounded">{{ tab.icon }}</span>
+            {{ tab.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Tab: Overview -->
+      @if (activeTab() === 'overview') {
+        <div class="tab-content">
+          <div class="profile-overview-grid">
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">KPI Definition</div>
+              @if (kpi()!.code) {
+                <div class="info-row"><span class="info-label">Code</span>
+                  <span class="info-value"><span class="kpi-code">{{ kpi()!.code }}</span></span></div>
+              }
+              <div class="info-row"><span class="info-label">Name</span>
+                <span class="info-value">{{ kpi()!.name }}</span></div>
+              <div class="info-row"><span class="info-label">Category</span>
+                <span class="info-value">{{ kpi()!.categoryName ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Type</span>
+                <span class="info-value"><span class="badge {{ typeBadge(kpi()!.type) }}">{{ typeLabel(kpi()!.type) }}</span></span></div>
+              <div class="info-row"><span class="info-label">Unit</span>
+                <span class="info-value">{{ kpi()!.unit ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Frequency</span>
+                <span class="info-value">{{ kpi()!.frequency ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Status</span>
+                <span class="info-value"><span class="badge {{ statusBadge(kpi()!.status) }}">{{ kpi()!.status | titlecase }}</span></span></div>
+            </div>
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">Scoring</div>
+              <div class="info-row"><span class="info-label">Target Value</span>
+                <span class="info-value">{{ kpi()!.targetValue ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Weight</span>
+                <span class="info-value">{{ kpi()!.weight != null ? kpi()!.weight + '%' : '—' }}</span></div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Tab: Assignments -->
+      @if (activeTab() === 'assignments') {
+        <div>
+          @if (assnLoading()) {
+            <div style="padding:16px">
+              @for (s of [1,2,3,4]; track s) { <div class="skeleton-row" style="margin-bottom:3px"></div> }
+            </div>
+          } @else if (assignments().length === 0) {
+            <div class="empty-state">
+              <span class="material-symbols-rounded">assignment_ind</span>
+              <h3>No assignments</h3>
+              <p>This KPI has not been assigned to any employees yet.</p>
+            </div>
+          } @else {
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>Employee</th><th>Department</th>
+                    <th>Target</th><th>Actual</th><th>Achievement</th><th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (a of assignments(); track a.id) {
+                    <tr>
+                      <td><div class="row-name">{{ a.employeeName ?? '—' }}</div></td>
+                      <td>{{ a.departmentName ?? '—' }}</td>
+                      <td>{{ a.targetValue ?? '—' }}</td>
+                      <td>{{ a.actualValue ?? '—' }}</td>
+                      <td>
+                        @if (a.achievementPct != null) {
+                          <div style="display:flex;align-items:center;gap:8px">
+                            <div class="score-bar" style="height:6px;width:80px">
+                              <div class="score-bar-fill {{ achievementColor(a.achievementPct) }}"
+                                   [style.width]="(a.achievementPct > 100 ? 100 : a.achievementPct) + '%'">
+                              </div>
+                            </div>
+                            <span class="score-chip {{ achievementColor(a.achievementPct) }}" style="font-size:0.8rem">
+                              {{ a.achievementPct | number:'1.0-0' }}%
+                            </span>
+                          </div>
+                        } @else { — }
+                      </td>
+                      <td><span class="badge {{ assnStatusBadge(a.status) }}">{{ a.status | titlecase }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Tab: Performance -->
+      @if (activeTab() === 'performance') {
+        <div class="tab-content">
+          <div class="empty-state">
+            <span class="material-symbols-rounded">trending_up</span>
+            <h3>Performance History</h3>
+            <p>Historical performance charts will be available in Sprint F5.</p>
+            <span class="badge badge-primary">Sprint F5</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+

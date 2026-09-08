@@ -1,0 +1,94 @@
+<div class="eu-root">
+
+  <!-- Existing evidence -->
+  @if (existingEvidence.length > 0) {
+    <div class="eu-existing">
+      @for (ev of existingEvidence; track ev.id) {
+        <div class="eu-file">
+          <span class="material-symbols-rounded eu-file-icon">{{ fileIcon(ev.contentType) }}</span>
+          <div class="eu-file-info">
+            <span class="eu-file-name">{{ ev.fileName }}</span>
+            @if (ev.fileSizeBytes) {
+              <span class="eu-file-size">{{ formatSize(ev.fileSizeBytes) }}</span>
+            }
+          </div>
+          <div class="eu-file-actions">
+            <button class="eu-action-btn download" (click)="downloadFile(ev)" title="Download">
+              <span class="material-symbols-rounded" style="font-size:18px">download</span>
+            </button>
+            @if (!readonly) {
+              <button class="eu-action-btn delete" (click)="deleteExisting(ev)" title="Remove">
+                <span class="material-symbols-rounded" style="font-size:18px">delete</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Pending uploads (in progress or done) -->
+  @if (pendingFiles.length > 0) {
+    <div class="eu-pending-list">
+      @for (pf of pendingFiles; track pf.file.name) {
+        <div class="eu-file pending" [class.error]="pf.status === 'error'">
+          <span class="material-symbols-rounded eu-file-icon">
+            {{ pf.status === 'done' ? 'check_circle' : pf.status === 'error' ? 'error' : 'upload_file' }}
+          </span>
+          <div class="eu-file-info">
+            <span class="eu-file-name">{{ pf.file.name }}</span>
+            @if (pf.status === 'error') {
+              <span class="eu-error-msg">{{ pf.error }}</span>
+            } @else if (pf.status !== 'done') {
+              <div class="eu-progress-bar">
+                <div class="eu-progress-fill" [style.width]="pf.progress + '%'"></div>
+              </div>
+            } @else {
+              <span class="eu-success-msg">Uploaded successfully</span>
+            }
+          </div>
+          <div class="eu-file-actions">
+            @if (pf.status === 'error') {
+              <button class="eu-action-btn" (click)="retryUpload(pf)">
+                <span class="material-symbols-rounded" style="font-size:18px">refresh</span>
+              </button>
+            }
+            @if (pf.status !== 'uploading') {
+              <button class="eu-action-btn delete" (click)="removePending(pf)">
+                <span class="material-symbols-rounded" style="font-size:18px">close</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Drop zone -->
+  @if (!readonly) {
+    <div class="eu-dropzone" [class.dragging]="isDragging"
+         (dragover)="onDragOver($event)"
+         (dragleave)="onDragLeave()"
+         (drop)="onDrop($event)">
+      <span class="material-symbols-rounded eu-drop-icon">cloud_upload</span>
+      <p class="eu-drop-text">Drag & drop files here</p>
+      <p class="eu-drop-sub">or</p>
+      <label class="eu-browse-btn">
+        <span class="material-symbols-rounded" style="font-size:17px">folder_open</span>
+        Browse Files
+        <input type="file" multiple hidden (change)="onBrowse($event)"
+               accept=".pdf,.xlsx,.xls,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp" />
+      </label>
+      <p class="eu-hint">PDF · Excel · Word · Images &nbsp;|&nbsp; Max {{ 10 }} MB per file</p>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="eu-error-banner">
+        <span class="material-symbols-rounded" style="font-size:16px">warning</span>
+        {{ errorMessage() }}
+      </div>
+    }
+  }
+
+</div>
+

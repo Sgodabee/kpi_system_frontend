@@ -1,0 +1,199 @@
+<div class="at-page">
+
+  <!-- ── Header ────────────────────────────────────────── -->
+  <div class="at-header">
+    <div>
+      <h1 class="at-heading">
+        <span class="material-symbols-rounded">history</span>Audit &amp; Compliance
+      </h1>
+      <p class="at-sub">Full activity log — every action is recorded and immutable</p>
+    </div>
+    <div class="at-export">
+      <button class="exp-btn" (click)="exportCSV()">
+        <span class="material-symbols-rounded">download</span>CSV
+      </button>
+      <button class="exp-btn" (click)="exportExcel()">
+        <span class="material-symbols-rounded">table_chart</span>Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filters ───────────────────────────────────────── -->
+  <div class="filters-row">
+    <div class="search-box">
+      <span class="material-symbols-rounded search-icon">search</span>
+      <input class="search-input" type="text" placeholder="Search user, action, entity…"
+             [value]="searchText" (input)="onSearch($event)" />
+    </div>
+    <select class="filter-sel" [(ngModel)]="filterAction" (change)="load()">
+      <option value="">All actions</option>
+      @for (a of actions; track a) { <option [value]="a">{{ a }}</option> }
+    </select>
+    <select class="filter-sel" [(ngModel)]="filterModule" (change)="load()">
+      <option value="">All modules</option>
+      @for (m of modules; track m) { <option [value]="m">{{ m }}</option> }
+    </select>
+    <input class="filter-date" type="date" [(ngModel)]="filterFrom" (change)="load()" placeholder="From" />
+    <input class="filter-date" type="date" [(ngModel)]="filterTo"   (change)="load()" placeholder="To" />
+    <button class="clear-btn" (click)="clearFilters()">
+      <span class="material-symbols-rounded">clear</span>Clear
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="err-banner">
+      <span class="material-symbols-rounded">error</span>{{ error() }}
+      <button class="retry-btn" (click)="load()">Retry</button>
+    </div>
+  }
+
+  <!-- ── Main split ─────────────────────────────────────── -->
+  <div class="at-split" [class.at-split--panel-open]="selected()">
+
+    <!-- Table -->
+    <div class="at-table-wrap">
+      @if (isLoading()) {
+        <div class="at-state"><span class="spinner"></span>Loading audit events…</div>
+      } @else if (events.length === 0) {
+        <div class="at-state">
+          <span class="material-symbols-rounded at-empty-icon">search_off</span>
+          No events match your filter.
+        </div>
+      } @else {
+        <table class="at-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Action</th>
+              <th>Module</th>
+              <th>Entity</th>
+              <th>Date &amp; Time</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ev of events; track ev.id) {
+              <tr class="at-row" [class.at-row--selected]="selected()?.id === ev.id"
+                  (click)="selectEvent(ev)">
+                <td>
+                  <div class="user-cell">
+                    <span class="user-avatar">{{ ev.userName.slice(0,2).toUpperCase() }}</span>
+                    <div>
+                      <span class="user-name">{{ ev.userName }}</span>
+                      @if (ev.userRole) { <span class="user-role">{{ ev.userRole }}</span> }
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="act-badge" [class]="actionClass(ev.action)">{{ ev.action }}</span>
+                </td>
+                <td><span class="module-chip">{{ ev.module }}</span></td>
+                <td class="text-muted">
+                  @if (ev.entityType) { {{ ev.entityType }}@if (ev.entityId) { #{{ ev.entityId }} } }
+                  @else { — }
+                </td>
+                <td class="text-muted at-date">{{ formatDateTime(ev.timestamp) }}</td>
+                <td class="text-muted ip-col">{{ ev.ipAddress ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        @if (totalPages > 1) {
+          <div class="pagination">
+            <button class="pg-btn" [disabled]="currentPage === 0" (click)="load(currentPage - 1)">
+              <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            @for (p of pages(); track p) {
+              <button class="pg-num" [class.pg-num--active]="p === currentPage" (click)="load(p)">{{ p + 1 }}</button>
+            }
+            <button class="pg-btn" [disabled]="currentPage >= totalPages - 1" (click)="load(currentPage + 1)">
+              <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+            <span class="pg-info">{{ total }} events</span>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Detail panel -->
+    @if (selected()) {
+      <aside class="at-detail">
+        <div class="detail-head">
+          <h2 class="detail-title">Audit Event</h2>
+          <button class="detail-close" (click)="closeDetail()">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+
+        @if (isLoadingDetail()) {
+          <div class="at-state"><span class="spinner"></span></div>
+        } @else {
+          <dl class="detail-list">
+            <dt>Who</dt>
+            <dd>{{ selected()!.userName }} @if (selected()!.userRole) { <em>({{ selected()!.userRole }})</em> }</dd>
+
+            <dt>Action</dt>
+            <dd><span class="act-badge" [class]="actionClass(selected()!.action)">{{ selected()!.action }}</span></dd>
+
+            <dt>Module</dt>
+            <dd>{{ selected()!.module }}</dd>
+
+            @if (selected()!.entityType) {
+              <dt>Entity</dt>
+              <dd>{{ selected()!.entityType }}@if (selected()!.entityId) { &nbsp;#{{ selected()!.entityId }} }</dd>
+            }
+
+            @if (selected()!.description) {
+              <dt>Description</dt>
+              <dd>{{ selected()!.description }}</dd>
+            }
+
+            <dt>Timestamp</dt>
+            <dd>{{ formatDateTime(selected()!.timestamp) }}</dd>
+
+            @if (selected()!.ipAddress) {
+              <dt>IP Address</dt>
+              <dd class="mono">{{ selected()!.ipAddress }}</dd>
+            }
+
+            @if (selected()!.correlationId) {
+              <dt>Correlation ID</dt>
+              <dd class="mono">{{ selected()!.correlationId }}</dd>
+            }
+
+            @if (selected()!.sessionId) {
+              <dt>Session ID</dt>
+              <dd class="mono">{{ selected()!.sessionId }}</dd>
+            }
+          </dl>
+
+          @if (snapshotEntries(selected()!.beforeSnapshot).length) {
+            <div class="snap-section">
+              <h3 class="snap-title snap-title--before">Before</h3>
+              <table class="snap-table">
+                @for (e of snapshotEntries(selected()!.beforeSnapshot); track e.key) {
+                  <tr><td class="snap-key">{{ e.key }}</td><td class="snap-val">{{ e.value }}</td></tr>
+                }
+              </table>
+            </div>
+          }
+
+          @if (snapshotEntries(selected()!.afterSnapshot).length) {
+            <div class="snap-section">
+              <h3 class="snap-title snap-title--after">After</h3>
+              <table class="snap-table">
+                @for (e of snapshotEntries(selected()!.afterSnapshot); track e.key) {
+                  <tr><td class="snap-key">{{ e.key }}</td><td class="snap-val">{{ e.value }}</td></tr>
+                }
+              </table>
+            </div>
+          }
+        }
+      </aside>
+    }
+
+  </div>
+</div>
+

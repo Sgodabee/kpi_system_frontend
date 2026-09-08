@@ -1,0 +1,256 @@
+<div class="ac-page">
+
+  <div class="ac-header">
+    <h1 class="ac-heading">
+      <span class="material-symbols-rounded">admin_panel_settings</span>Administration
+    </h1>
+    <p class="ac-sub">Manage financial years, cycles, rating scales, and system settings</p>
+  </div>
+
+  <!-- ── Feedback ──────────────────────────────────────── -->
+  @if (saveSuccess()) {
+    <div class="fb-success"><span class="material-symbols-rounded">check_circle</span>{{ saveSuccess() }}</div>
+  }
+  @if (error()) {
+    <div class="fb-error"><span class="material-symbols-rounded">error</span>{{ error() }}</div>
+  }
+
+  <div class="ac-layout">
+
+    <!-- ── Sidebar nav ──────────────────────────────────── -->
+    <nav class="ac-nav">
+      @for (tab of tabs; track tab.key) {
+        <button class="nav-item" [class.nav-item--active]="activeTab() === tab.key"
+                (click)="selectTab(tab.key)">
+          <span class="material-symbols-rounded">{{ tab.icon }}</span>{{ tab.label }}
+        </button>
+      }
+    </nav>
+
+    <!-- ── Content ──────────────────────────────────────── -->
+    <div class="ac-content">
+
+      @if (isLoading()) {
+        <div class="ac-loading"><span class="spinner"></span>Loading…</div>
+      }
+
+      <!-- ══ Financial Years ══════════════════════════════ -->
+      @if (activeTab() === 'financial-years' && !isLoading()) {
+        <div class="section-header">
+          <h2 class="section-title">Financial Years</h2>
+          <button class="add-btn" (click)="fyForm = {}; editingFY = { id: 0, name: '', startDate: '', endDate: '', status: 'FUTURE' }">
+            <span class="material-symbols-rounded">add</span>New Year
+          </button>
+        </div>
+
+        @if (editingFY) {
+          <div class="form-card">
+            <h3 class="form-title">{{ editingFY.id ? 'Edit' : 'New' }} Financial Year</h3>
+            <div class="form-grid">
+              <div class="form-field"><label>Name</label><input class="fi" [(ngModel)]="fyForm.name" placeholder="2025-2026" /></div>
+              <div class="form-field"><label>Start Date</label><input class="fi" type="date" [(ngModel)]="fyForm.startDate" /></div>
+              <div class="form-field"><label>End Date</label><input class="fi" type="date" [(ngModel)]="fyForm.endDate" /></div>
+              <div class="form-field">
+                <label>Status</label>
+                <select class="fi" [(ngModel)]="fyForm.status">
+                  <option value="FUTURE">Future</option><option value="ACTIVE">Active</option><option value="CLOSED">Closed</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-cancel" (click)="cancelEditFY()">Cancel</button>
+              <button class="btn-save" [disabled]="isSaving()" (click)="saveFY()">Save</button>
+            </div>
+          </div>
+        }
+
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Period</th><th>Status</th><th>Cycles</th><th></th></tr></thead>
+          <tbody>
+            @for (fy of financialYears(); track fy.id) {
+              <tr>
+                <td class="fw">{{ fy.name }}</td>
+                <td class="text-muted">{{ formatDate(fy.startDate) }} – {{ formatDate(fy.endDate) }}</td>
+                <td><span class="badge" [class]="statusBadge(fy.status)">{{ fy.status }}</span></td>
+                <td>{{ fy.cycleCount ?? '—' }}</td>
+                <td class="row-actions">
+                  <button class="icon-btn" (click)="startEditFY(fy)"><span class="material-symbols-rounded">edit</span></button>
+                  <button class="icon-btn icon-btn--danger" (click)="deleteFY(fy.id)"><span class="material-symbols-rounded">delete</span></button>
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="5" class="empty-cell">No financial years configured.</td></tr> }
+          </tbody>
+        </table>
+      }
+
+      <!-- ══ Performance Cycles ════════════════════════════ -->
+      @if (activeTab() === 'performance-cycles' && !isLoading()) {
+        <div class="section-header">
+          <h2 class="section-title">Performance Cycles</h2>
+          <button class="add-btn" (click)="cycleForm = {}; editingCycle = { name: '', financialYearId: 0, startDate: '', endDate: '', submissionDeadline: '', reviewDeadline: '', status: 'PLANNED' }">
+            <span class="material-symbols-rounded">add</span>New Cycle
+          </button>
+        </div>
+
+        @if (editingCycle) {
+          <div class="form-card">
+            <h3 class="form-title">{{ editingCycle.id ? 'Edit' : 'New' }} Performance Cycle</h3>
+            <div class="form-grid">
+              <div class="form-field"><label>Name</label><input class="fi" [(ngModel)]="cycleForm.name" placeholder="Q1 2026" /></div>
+              <div class="form-field"><label>Start Date</label><input class="fi" type="date" [(ngModel)]="cycleForm.startDate" /></div>
+              <div class="form-field"><label>End Date</label><input class="fi" type="date" [(ngModel)]="cycleForm.endDate" /></div>
+              <div class="form-field"><label>Submission Deadline</label><input class="fi" type="date" [(ngModel)]="cycleForm.submissionDeadline" /></div>
+              <div class="form-field"><label>Review Deadline</label><input class="fi" type="date" [(ngModel)]="cycleForm.reviewDeadline" /></div>
+              <div class="form-field">
+                <label>Status</label>
+                <select class="fi" [(ngModel)]="cycleForm.status">
+                  <option value="PLANNED">Planned</option><option value="ACTIVE">Active</option><option value="CLOSED">Closed</option><option value="ARCHIVED">Archived</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-cancel" (click)="cancelEditCycle()">Cancel</button>
+              <button class="btn-save" [disabled]="isSaving()" (click)="saveCycle()">Save</button>
+            </div>
+          </div>
+        }
+
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Financial Year</th><th>Submission By</th><th>Review By</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            @for (c of cycles(); track c.id) {
+              <tr>
+                <td class="fw">{{ c.name }}</td>
+                <td class="text-muted">{{ c.financialYearName ?? c.financialYearId }}</td>
+                <td class="text-muted">{{ formatDate(c.submissionDeadline) }}</td>
+                <td class="text-muted">{{ formatDate(c.reviewDeadline) }}</td>
+                <td><span class="badge" [class]="statusBadge(c.status)">{{ c.status }}</span></td>
+                <td class="row-actions">
+                  <button class="icon-btn" (click)="startEditCycle(c)"><span class="material-symbols-rounded">edit</span></button>
+                  <button class="icon-btn icon-btn--danger" (click)="deleteCycle(c.id)"><span class="material-symbols-rounded">delete</span></button>
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="6" class="empty-cell">No performance cycles configured.</td></tr> }
+          </tbody>
+        </table>
+      }
+
+      <!-- ══ Rating Scales ══════════════════════════════════ -->
+      @if (activeTab() === 'rating-scales' && !isLoading()) {
+        <div class="section-header">
+          <h2 class="section-title">Rating Scales</h2>
+        </div>
+        @for (scale of ratingScales(); track scale.id) {
+          <div class="scale-card">
+            <div class="scale-header">
+              <span class="fw">{{ scale.name }}</span>
+              @if (scale.isDefault) { <span class="badge badge-active">Default</span> }
+              <button class="icon-btn" style="margin-left:auto" (click)="startEditScale(scale)">
+                <span class="material-symbols-rounded">edit</span>
+              </button>
+            </div>
+            @if (editingScale?.id === scale.id) {
+              <div class="form-grid scale-form">
+                <div class="form-field"><label>Outstanding (min %)</label><input class="fi" type="number" [(ngModel)]="editingScale!.outstanding" /></div>
+                <div class="form-field"><label>Exceeds Expectations (min %)</label><input class="fi" type="number" [(ngModel)]="editingScale!.exceedsExpectations" /></div>
+                <div class="form-field"><label>Meets Expectations (min %)</label><input class="fi" type="number" [(ngModel)]="editingScale!.meetsExpectations" /></div>
+                <div class="form-field"><label>Needs Improvement (min %)</label><input class="fi" type="number" [(ngModel)]="editingScale!.needsImprovement" /></div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-cancel" (click)="cancelEditScale()">Cancel</button>
+                <button class="btn-save" [disabled]="isSaving()" (click)="saveScale()">Save</button>
+              </div>
+            } @else {
+              <div class="scale-thresholds">
+                <span class="thr thr-outstanding">Outstanding ≥ {{ scale.outstanding }}%</span>
+                <span class="thr thr-exceeds">Exceeds ≥ {{ scale.exceedsExpectations }}%</span>
+                <span class="thr thr-meets">Meets ≥ {{ scale.meetsExpectations }}%</span>
+                <span class="thr thr-needs">Needs Improvement ≥ {{ scale.needsImprovement }}%</span>
+                <span class="thr thr-unacceptable">Unacceptable &lt; {{ scale.needsImprovement }}%</span>
+              </div>
+            }
+          </div>
+        }
+        @empty { <p class="empty-cell">No rating scales configured.</p> }
+      }
+
+      <!-- ══ System Config ══════════════════════════════════ -->
+      @if (activeTab() === 'system-config' && !isLoading()) {
+        <div class="section-header">
+          <h2 class="section-title">System Configuration</h2>
+        </div>
+        @if (config()) {
+          <div class="form-card">
+            <div class="form-grid">
+              <div class="form-field"><label>Municipality Name</label><input class="fi" [(ngModel)]="configForm.municipalityName" /></div>
+              <div class="form-field"><label>Max Evidence File Size (MB)</label><input class="fi" type="number" [(ngModel)]="configForm.maxEvidenceFileSizeMb" /></div>
+              <div class="form-field"><label>Review Reminder (days before deadline)</label><input class="fi" type="number" [(ngModel)]="configForm.reviewReminderDays" /></div>
+              <div class="form-field"><label>Escalation After (days overdue)</label><input class="fi" type="number" [(ngModel)]="configForm.escalationAfterDays" /></div>
+              <div class="form-field"><label>Session Timeout (minutes)</label><input class="fi" type="number" [(ngModel)]="configForm.sessionTimeoutMinutes" /></div>
+            </div>
+            <div class="form-actions" style="justify-content:flex-end">
+              <button class="btn-save" [disabled]="isSaving()" (click)="saveConfig()">
+                <span class="material-symbols-rounded">save</span>Save Configuration
+              </button>
+            </div>
+          </div>
+        }
+      }
+
+      <!-- ══ Notification Templates ════════════════════════ -->
+      @if (activeTab() === 'notification-templates' && !isLoading()) {
+        <div class="section-header"><h2 class="section-title">Notification Templates</h2></div>
+        <table class="data-table">
+          <thead><tr><th>Template</th><th>Trigger</th><th>Subject</th><th>Active</th></tr></thead>
+          <tbody>
+            @for (t of templates(); track t.code) {
+              <tr>
+                <td class="fw">{{ t.name }}</td>
+                <td class="text-muted">{{ t.trigger }}</td>
+                <td>{{ t.subject }}</td>
+                <td><span class="badge" [class]="t.isActive ? 'badge-active' : 'badge-gray'">{{ t.isActive ? 'Active' : 'Inactive' }}</span></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="4" class="empty-cell">No templates found.</td></tr> }
+          </tbody>
+        </table>
+      }
+
+      <!-- ══ Working Calendar ══════════════════════════════ -->
+      @if (activeTab() === 'working-calendar' && !isLoading()) {
+        <div class="section-header"><h2 class="section-title">Public Holidays</h2></div>
+        <div class="form-card holiday-form">
+          <div class="form-grid">
+            <div class="form-field"><label>Holiday Name</label><input class="fi" [(ngModel)]="holidayForm.name" placeholder="e.g. Heritage Day" /></div>
+            <div class="form-field"><label>Date</label><input class="fi" type="date" [(ngModel)]="holidayForm.date" /></div>
+          </div>
+          <div class="form-actions" style="justify-content:flex-end">
+            <button class="btn-save" (click)="addHoliday()">
+              <span class="material-symbols-rounded">add</span>Add Holiday
+            </button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Date</th><th>Recurring</th><th></th></tr></thead>
+          <tbody>
+            @for (h of holidays(); track h.id) {
+              <tr>
+                <td class="fw">{{ h.name }}</td>
+                <td class="text-muted">{{ formatDate(h.date) }}</td>
+                <td>{{ h.recurring ? 'Yes' : 'No' }}</td>
+                <td class="row-actions">
+                  <button class="icon-btn icon-btn--danger" (click)="deleteHoliday(h.id)"><span class="material-symbols-rounded">delete</span></button>
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="4" class="empty-cell">No holidays added.</td></tr> }
+          </tbody>
+        </table>
+      }
+
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,332 @@
+<div class="org-page page-enter">
+
+  <!-- Page Header -->
+  <div class="pg-hd">
+    <div>
+      <div class="pg-breadcrumb">
+        <span class="material-symbols-rounded">people</span>
+        Organisation
+      </div>
+      <h1 class="pg-title">Employees</h1>
+      <p class="pg-desc">
+        @if (!isLoading() && total > 0) { {{ total }} employees found }
+        @else { Browse and manage all municipal employees }
+      </p>
+    </div>
+    @if (canAdd) {
+      <div class="pg-hd-right">
+        <button class="btn-primary" (click)="openAdd()">
+          <span class="material-symbols-rounded">person_add</span>
+          Add Employee
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="material-symbols-rounded">search</span>
+      <input type="text" placeholder="Search by name or email…" [formControl]="searchCtrl" />
+    </div>
+
+    <select class="filter-select" (change)="onDeptChange($event)" [value]="selectedDept">
+      <option value="0">All Departments</option>
+      @for (d of departments(); track d.id) {
+        <option [value]="d.id">{{ d.name }}</option>
+      }
+    </select>
+
+    @if (divisions().length > 0) {
+      <select class="filter-select" (change)="onDivChange($event)" [value]="selectedDiv">
+        <option value="0">All Divisions</option>
+        @for (d of divisions(); track d.id) {
+          <option [value]="d.id">{{ d.name }}</option>
+        }
+      </select>
+    }
+
+    <select class="filter-select" (change)="onStatusChange($event)" [value]="selectedStatus">
+      <option value="">All Statuses</option>
+      <option value="ACTIVE">Active</option>
+      <option value="INACTIVE">Inactive</option>
+      <option value="SUSPENDED">Suspended</option>
+    </select>
+
+    @if (searchCtrl.value || selectedDept || selectedStatus) {
+      <button class="btn-secondary" (click)="clearSearch()" style="white-space:nowrap">
+        <span class="material-symbols-rounded">filter_alt_off</span>
+        Clear
+      </button>
+    }
+
+    @if (!isLoading()) {
+      <span class="filter-count">{{ total }} results</span>
+    }
+  </div>
+
+  <!-- Table card -->
+  <div class="emp-table-card">
+
+    <!-- Loading skeleton -->
+    @if (isLoading()) {
+      <div style="padding:8px">
+        @for (s of [1,2,3,4,5,6,7,8]; track s) {
+          <div class="skeleton-row" style="margin-bottom:3px"></div>
+        }
+      </div>
+    }
+
+    <!-- Error -->
+    @if (!isLoading() && error()) {
+      <div class="error-state">
+        <span class="material-symbols-rounded">error</span>
+        <h3>{{ error() }}</h3>
+        <button class="btn-primary" (click)="load()">
+          <span class="material-symbols-rounded">refresh</span>
+          Retry
+        </button>
+      </div>
+    }
+
+    <!-- Empty -->
+    @if (!isLoading() && !error() && employees.length === 0) {
+      <div class="empty-state">
+        <span class="material-symbols-rounded">person_search</span>
+        <h3>No employees found</h3>
+        <p>Try adjusting your search filters.</p>
+        @if (searchCtrl.value || selectedDept || selectedStatus) {
+          <button class="btn-secondary" (click)="clearSearch()">Clear Filters</button>
+        }
+      </div>
+    }
+
+    <!-- Table -->
+    @if (!isLoading() && !error() && employees.length > 0) {
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="sortable" [class.sorted]="sortField==='fullName'" (click)="sort('fullName')">
+                Employee <span class="material-symbols-rounded sort-ico">{{ sortIcon('fullName') }}</span>
+              </th>
+              <th>Position</th>
+              <th class="sortable" [class.sorted]="sortField==='departmentName'" (click)="sort('departmentName')">
+                Department <span class="material-symbols-rounded sort-ico">{{ sortIcon('departmentName') }}</span>
+              </th>
+              <th>Division</th>
+              <th class="sortable" [class.sorted]="sortField==='performanceScore'" (click)="sort('performanceScore')">
+                Score <span class="material-symbols-rounded sort-ico">{{ sortIcon('performanceScore') }}</span>
+              </th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (emp of employees; track emp.id) {
+              <tr (click)="viewEmp(emp.id)">
+                <td>
+                  <div class="row-person">
+                    <div class="row-avatar">{{ getInitials(emp.fullName ?? (emp.firstName + ' ' + emp.lastName)) }}</div>
+                    <div>
+                      <div class="row-name">{{ emp.fullName }}</div>
+                      <div class="row-email">{{ emp.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div>{{ emp.positionTitle ?? '—' }}</div>
+                  @if (emp.grade) { <div class="row-sub">Grade {{ emp.grade }}</div> }
+                </td>
+                <td>{{ emp.departmentName ?? '—' }}</td>
+                <td>{{ emp.divisionName   ?? '—' }}</td>
+                <td>
+                  @if (emp.performanceScore != null) {
+                    <div class="score-cell">
+                      <div class="score-bar" style="height:5px;width:70px">
+                        <div class="score-bar-fill {{ scoreColor(emp.performanceScore) }}"
+                             [style.width]="emp.performanceScore + '%'"></div>
+                      </div>
+                      <span class="score-chip {{ scoreClass(emp.performanceScore) }}">
+                        {{ emp.performanceScore }}%
+                      </span>
+                    </div>
+                  } @else {
+                    <span style="color:var(--text-muted)">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="badge {{ statusBadge(emp.status) }}">
+                    {{ emp.status | titlecase }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages > 1) {
+        <div class="pagination">
+          <span class="pg-info">
+            Showing {{ startItem }}–{{ endItem }} of {{ total }} employees
+          </span>
+          <div class="pg-btns">
+            <button class="pg-btn" [disabled]="currentPage === 0" (click)="goToPage(0)">
+              <span class="material-symbols-rounded">first_page</span>
+            </button>
+            <button class="pg-btn" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
+              <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            @for (n of pageNumbers; track n) {
+              <button class="pg-btn" [class.active]="n === currentPage" (click)="goToPage(n)">
+                {{ n + 1 }}
+              </button>
+            }
+            <button class="pg-btn" [disabled]="currentPage === totalPages - 1" (click)="goToPage(currentPage + 1)">
+              <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+            <button class="pg-btn" [disabled]="currentPage === totalPages - 1" (click)="goToPage(totalPages - 1)">
+              <span class="material-symbols-rounded">last_page</span>
+            </button>
+          </div>
+        </div>
+      }
+    }
+
+  </div>
+
+</div>
+
+<!-- ── Add Employee Modal ────────────────────────────────────────────────── -->
+@if (showAddModal()) {
+  <div class="modal-backdrop" (click)="closeAdd()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span class="material-symbols-rounded">person_add</span>
+          Add Employee
+        </h2>
+        <button class="icon-btn" (click)="closeAdd()">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <form [formGroup]="empForm" (ngSubmit)="saveEmployee()">
+        <div class="modal-body">
+
+          <!-- Name row -->
+          <div class="form-row">
+            <div class="form-group" style="flex:1">
+              <label class="form-label">First Name <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="firstName"
+                [class.invalid]="fieldError('firstName')" placeholder="e.g. John" />
+              @if (fieldError('firstName')) { <span class="form-error">Required</span> }
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Last Name <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="lastName"
+                [class.invalid]="fieldError('lastName')" placeholder="e.g. Smith" />
+              @if (fieldError('lastName')) { <span class="form-error">Required</span> }
+            </div>
+          </div>
+
+          <!-- Employee number + email -->
+          <div class="form-row">
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Employee Number <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="employeeNumber"
+                [class.invalid]="fieldError('employeeNumber')" placeholder="e.g. EMP001" />
+              @if (fieldError('employeeNumber')) { <span class="form-error">Required</span> }
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Phone</label>
+              <input class="form-input" type="tel" formControlName="phone" placeholder="e.g. +27 61 234 5678" />
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label">Email <span class="required">*</span></label>
+            <input class="form-input" type="email" formControlName="email"
+              [class.invalid]="fieldError('email')" placeholder="e.g. john.smith@municipality.gov.za" />
+            @if (fieldError('email')) { <span class="form-error">Valid email required</span> }
+          </div>
+
+          <!-- Department → Division → Position cascade -->
+          <div class="form-row">
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Department</label>
+              <select class="form-input" formControlName="departmentId" (change)="onModalDeptChange()">
+                <option [ngValue]="null">— Select department —</option>
+                @for (d of departments(); track d.id) {
+                  <option [ngValue]="d.id">{{ d.name }}</option>
+                }
+              </select>
+            </div>
+            @if (modalDivisions().length > 0) {
+              <div class="form-group" style="flex:1">
+                <label class="form-label">Division</label>
+                <select class="form-input" formControlName="divisionId" (change)="onModalDivChange()">
+                  <option [ngValue]="null">— Select division —</option>
+                  @for (d of modalDivisions(); track d.id) {
+                    <option [ngValue]="d.id">{{ d.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Position <span class="required">*</span></label>
+            <select class="form-input" formControlName="positionId"
+              [class.invalid]="fieldError('positionId')">
+              <option [ngValue]="null">— Select position —</option>
+              @for (p of modalPositions(); track p.id) {
+                <option [ngValue]="p.id">{{ p.name }}{{ p.gradeLevel ? ' (' + p.gradeLevel + ')' : '' }}</option>
+              }
+            </select>
+            @if (fieldError('positionId')) { <span class="form-error">Position is required</span> }
+            @if (modalPositions().length === 0) {
+              <span class="form-error" style="color:var(--text-muted)">No positions found — select a department first or contact admin</span>
+            }
+          </div>
+
+          <!-- Start date + status -->
+          <div class="form-row">
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Start Date <span class="required">*</span></label>
+              <input class="form-input" type="date" formControlName="startDate"
+                [class.invalid]="fieldError('startDate')" />
+              @if (fieldError('startDate')) { <span class="form-error">Required</span> }
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Status</label>
+              <select class="form-input" formControlName="status">
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="ON_LEAVE">On Leave</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeAdd()" [disabled]="isSaving()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="isSaving()">
+            @if (isSaving()) {
+              <span class="material-symbols-rounded spin">progress_activity</span>
+              Saving…
+            } @else {
+              <span class="material-symbols-rounded">person_add</span>
+              Add Employee
+            }
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+}

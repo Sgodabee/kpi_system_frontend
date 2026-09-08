@@ -1,0 +1,197 @@
+<div class="org-page page-enter">
+
+  <!-- Page header -->
+  <div class="pg-hd">
+    <div>
+      <div class="pg-breadcrumb">
+        <span class="material-symbols-rounded">trending_up</span>
+        Performance
+      </div>
+      <h1 class="pg-title">My Performance</h1>
+      <p class="pg-desc">Track and capture your KPI performance for the selected period</p>
+    </div>
+    <div class="pg-hd-right">
+      <!-- Period selector -->
+      <select class="filter-select period-select" (change)="onPeriodChange($event)" [value]="selectedPeriod">
+        @for (opt of periodOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+      <button class="btn-primary" (click)="newCapture()">
+        <span class="material-symbols-rounded">add</span>
+        Capture Performance
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  @if (summary()) {
+    <div class="perf-summary">
+      <!-- Overall score gauge -->
+      <div class="perf-score-card">
+        @if (summary()!.overallScore != null) {
+          <svg viewBox="0 0 120 120" width="96" height="96">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--gray-200)" stroke-width="10"/>
+            <circle cx="60" cy="60" r="52" fill="none"
+              stroke="url(#myPerfGauge)" stroke-width="10"
+              stroke-dasharray="326.7"
+              [attr.stroke-dashoffset]="326.7 * (1 - (summary()!.overallScore ?? 0) / 100)"
+              stroke-linecap="round" transform="rotate(-90 60 60)"
+              style="transition:stroke-dashoffset 1.5s cubic-bezier(.25,1,.5,1)"/>
+            <defs>
+              <linearGradient id="myPerfGauge" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2563eb"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <text x="60" y="57" text-anchor="middle" font-size="18" font-weight="800" fill="#0f172a">{{ summary()!.overallScore }}%</text>
+            <text x="60" y="71" text-anchor="middle" font-size="8" font-weight="600" fill="#64748b">SCORE</text>
+          </svg>
+          <div>
+            <div class="perf-score-label">Overall Performance</div>
+            <div class="perf-score-period">{{ selectedPeriod }}</div>
+          </div>
+        } @else {
+          <div class="perf-no-score">
+            <span class="material-symbols-rounded" style="font-size:36px;color:var(--text-muted)">trending_up</span>
+            <span>No score yet</span>
+          </div>
+        }
+      </div>
+
+      <!-- Stat chips -->
+      <div class="perf-stat-chips">
+        <button class="perf-chip" [class.active]="!selectedStatus" (click)="onStatusFilter('')">
+          <span class="chip-val">{{ summary()!.totalKpis }}</span>
+          <span class="chip-lbl">Total KPIs</span>
+        </button>
+        <button class="perf-chip" [class.active]="selectedStatus === 'DRAFT'" (click)="onStatusFilter('DRAFT')">
+          <span class="chip-val">{{ summary()!.drafts }}</span>
+          <span class="chip-lbl">Drafts</span>
+        </button>
+        <button class="perf-chip submitted" [class.active]="selectedStatus === 'SUBMITTED'" (click)="onStatusFilter('SUBMITTED')">
+          <span class="chip-val">{{ summary()!.submitted }}</span>
+          <span class="chip-lbl">Submitted</span>
+        </button>
+        <button class="perf-chip approved" [class.active]="selectedStatus === 'APPROVED'" (click)="onStatusFilter('APPROVED')">
+          <span class="chip-val">{{ summary()!.approved }}</span>
+          <span class="chip-lbl">Approved</span>
+        </button>
+        @if (summary()!.rejected > 0) {
+          <button class="perf-chip rejected" [class.active]="selectedStatus === 'REJECTED'" (click)="onStatusFilter('REJECTED')">
+            <span class="chip-val">{{ summary()!.rejected }}</span>
+            <span class="chip-lbl">Rejected</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Table card -->
+  <div class="perf-table-card">
+    @if (isLoading()) {
+      <div style="padding:10px">
+        @for (s of [1,2,3,4,5,6]; track s) {
+          <div class="skeleton-row" style="margin-bottom:3px"></div>
+        }
+      </div>
+    }
+
+    @if (!isLoading() && error()) {
+      <div class="error-state">
+        <span class="material-symbols-rounded">error</span>
+        <h3>{{ error() }}</h3>
+        <p>The performance service may not be available yet.</p>
+        <button class="btn-primary" (click)="load()">
+          <span class="material-symbols-rounded">refresh</span> Retry
+        </button>
+      </div>
+    }
+
+    @if (!isLoading() && !error() && records.length === 0) {
+      <div class="empty-state">
+        <span class="material-symbols-rounded">assignment_turned_in</span>
+        <h3>No performance records</h3>
+        <p>No KPI performance records found for {{ selectedPeriod }}.</p>
+        <button class="btn-primary" (click)="newCapture()" style="margin-top:12px">
+          <span class="material-symbols-rounded">add</span>
+          Capture Performance
+        </button>
+      </div>
+    }
+
+    @if (!isLoading() && !error() && records.length > 0) {
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>KPI</th>
+              <th>Category</th>
+              <th>Target</th>
+              <th>Actual</th>
+              <th>Achievement</th>
+              <th>Score</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of records; track r.id) {
+              <tr (click)="openRecord(r)" [class.rejected-row]="r.status === 'REJECTED'">
+                <td>
+                  <div class="row-name">{{ r.kpiName ?? '—' }}</div>
+                  @if (r.kpiCode) { <div class="row-sub"><span class="kpi-code">{{ r.kpiCode }}</span></div> }
+                </td>
+                <td>{{ r.categoryName ?? '—' }}</td>
+                <td>
+                  {{ r.targetValue != null ? r.targetValue + (r.kpiUnit ? ' ' + r.kpiUnit : '') : '—' }}
+                </td>
+                <td>
+                  @if (r.actualValue != null) {
+                    <strong>{{ r.actualValue }}{{ r.kpiUnit ? ' ' + r.kpiUnit : '' }}</strong>
+                  } @else if (r.actualText) {
+                    <span>{{ r.actualText }}</span>
+                  } @else {
+                    <span class="not-captured">Not captured</span>
+                  }
+                </td>
+                <td>
+                  @if (r.achievementPct != null) {
+                    <div class="achieve-cell">
+                      <div class="score-bar" style="height:5px;width:70px">
+                        <div class="score-bar-fill {{ achievementColor(r.achievementPct) }}"
+                             [style.width]="(r.achievementPct > 100 ? 100 : r.achievementPct) + '%'"></div>
+                      </div>
+                      <span class="score-chip {{ achievementColor(r.achievementPct) }}" style="font-size:0.8rem">
+                        {{ r.achievementPct | number:'1.0-0' }}%
+                      </span>
+                    </div>
+                  } @else { — }
+                </td>
+                <td>
+                  <span class="score-chip {{ achievementColor(r.score) }}" style="font-size:0.9rem">
+                    {{ r.score != null ? r.score + '%' : '—' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge {{ statusBadge(r.status) }}">{{ statusLabel(r.status) }}</span>
+                </td>
+                <td>
+                  @if (canCapture(r)) {
+                    <button class="capture-btn" (click)="$event.stopPropagation(); captureKpi(r)"
+                            [title]="r.status === 'REJECTED' ? 'Edit and resubmit' : 'Capture performance'">
+                      <span class="material-symbols-rounded" style="font-size:18px">edit</span>
+                      {{ r.status === 'REJECTED' ? 'Edit' : 'Capture' }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+</div>
+

@@ -1,0 +1,222 @@
+<div class="org-page page-enter">
+
+  <!-- Page Header -->
+  <div class="pg-hd">
+    <div>
+      <div class="pg-breadcrumb">
+        <span class="material-symbols-rounded">account_tree</span>
+        Organisation
+      </div>
+      <h1 class="pg-title">Departments</h1>
+      <p class="pg-desc">Manage the municipal organisational structure</p>
+    </div>
+    <div class="pg-hd-right">
+      <div class="search-box" style="max-width:260px">
+        <span class="material-symbols-rounded">search</span>
+        <input type="text" placeholder="Search departments…" [(ngModel)]="searchQuery" />
+      </div>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openAdd()">
+          <span class="material-symbols-rounded">add</span>
+          Add Department
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="dept-grid">
+      @for (s of [1,2,3,4,5,6]; track s) {
+        <div class="skeleton-card"></div>
+      }
+    </div>
+  }
+
+  <!-- Error -->
+  @if (!isLoading() && error()) {
+    <div class="info-card">
+      <div class="error-state">
+        <span class="material-symbols-rounded">error</span>
+        <h3>{{ error() }}</h3>
+        <p>Check that the backend server is running on port 8081.</p>
+        <button class="btn-primary" (click)="load()">
+          <span class="material-symbols-rounded">refresh</span>
+          Retry
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Departments Grid -->
+  @if (!isLoading() && !error()) {
+    @if (filteredDepts.length === 0) {
+      <div class="info-card">
+        <div class="empty-state">
+          <span class="material-symbols-rounded">account_tree</span>
+          <h3>No departments found</h3>
+          <p>{{ searchQuery ? 'No departments match your search.' : 'No departments have been created yet.' }}</p>
+          @if (canManage && !searchQuery) {
+            <button class="btn-primary" (click)="openAdd()">
+              <span class="material-symbols-rounded">add</span>
+              Add First Department
+            </button>
+          }
+        </div>
+      </div>
+    } @else {
+
+      <!-- Stats summary strip -->
+      <div class="dept-summary-strip">
+        <div class="ds-item">
+          <span class="ds-val">{{ departments.length }}</span>
+          <span class="ds-lbl">Departments</span>
+        </div>
+        <div class="ds-divider"></div>
+        <div class="ds-item">
+          <span class="ds-val">{{ totalEmployees }}</span>
+          <span class="ds-lbl">Total Employees</span>
+        </div>
+        <div class="ds-divider"></div>
+        <div class="ds-item">
+          <span class="ds-val">{{ filteredDepts.length }}</span>
+          <span class="ds-lbl">Showing</span>
+        </div>
+      </div>
+
+      <div class="dept-grid">
+        @for (dept of filteredDepts; track dept.id; let i = $index) {
+          <div class="dept-card" [class]="'d' + ((i % 8) + 1)" (click)="goTo(dept.id)">
+
+            <div class="dept-card-head">
+              <div class="dept-card-icon">
+                <span class="material-symbols-rounded">account_tree</span>
+              </div>
+              <span class="badge {{ dept.status === 'INACTIVE' ? 'badge-gray' : 'badge-success' }}">
+                {{ dept.status ?? 'Active' }}
+              </span>
+            </div>
+
+            <h3 class="dept-card-name">{{ dept.name }}</h3>
+            @if (dept.code) {
+              <span class="dept-card-code">{{ dept.code }}</span>
+            }
+            @if (dept.directorName) {
+              <p class="dept-card-director">
+                <span class="material-symbols-rounded" style="font-size:14px">person</span>
+                {{ dept.directorName }}
+              </p>
+            }
+
+            <div class="dept-card-stats">
+              <div class="dept-stat">
+                <span class="dept-stat-val">{{ dept.employeeCount ?? '—' }}</span>
+                <span class="dept-stat-lbl">Employees</span>
+              </div>
+              <div class="dept-stat">
+                <span class="dept-stat-val">{{ dept.divisionCount ?? '—' }}</span>
+                <span class="dept-stat-lbl">Divisions</span>
+              </div>
+              <div class="dept-stat">
+                <span class="dept-stat-val">{{ dept.activeKpiCount ?? '—' }}</span>
+                <span class="dept-stat-lbl">KPIs</span>
+              </div>
+            </div>
+
+            @if (dept.performanceScore != null) {
+              <div class="dept-card-perf">
+                <div class="score-bar">
+                  <div class="score-bar-fill {{ scoreColor(dept.performanceScore) }}"
+                    [style.width]="dept.performanceScore + '%'">
+                  </div>
+                </div>
+                <span class="score-chip {{ scoreClass(dept.performanceScore) }}" style="font-size:0.8rem">
+                  {{ dept.performanceScore }}%
+                </span>
+              </div>
+            }
+
+            <div class="dept-card-arrow">
+              <span class="material-symbols-rounded">chevron_right</span>
+            </div>
+
+          </div>
+        }
+      </div>
+    }
+  }
+
+</div>
+
+<!-- ── Add Department Modal ──────────────────────────────────────────────── -->
+@if (showAddModal()) {
+  <div class="modal-backdrop" (click)="closeAdd()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span class="material-symbols-rounded">account_tree</span>
+          Add Department
+        </h2>
+        <button class="icon-btn" (click)="closeAdd()">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <form [formGroup]="deptForm" (ngSubmit)="saveDepartment()">
+        <div class="modal-body">
+
+          <div class="form-row">
+            <div class="form-group" style="flex:2">
+              <label class="form-label">Department Name <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="name"
+                [class.invalid]="fieldError('name')"
+                placeholder="e.g. Finance" />
+              @if (fieldError('name')) {
+                <span class="form-error">Department name is required</span>
+              }
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Code <span class="required">*</span></label>
+              <input class="form-input" type="text" formControlName="code"
+                [class.invalid]="fieldError('code')"
+                placeholder="e.g. FIN001"
+                style="text-transform:uppercase" />
+              @if (fieldError('code')) {
+                <span class="form-error">Code is required</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-input" formControlName="description" rows="3"
+              placeholder="Optional description of this department…"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="flex-direction:row;align-items:center;gap:10px;display:flex">
+              <input type="checkbox" formControlName="enabled" style="width:16px;height:16px" />
+              Active (visible and operational)
+            </label>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeAdd()" [disabled]="isSaving()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="isSaving()">
+            @if (isSaving()) {
+              <span class="material-symbols-rounded spin">progress_activity</span>
+              Saving…
+            } @else {
+              <span class="material-symbols-rounded">add</span>
+              Create Department
+            }
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+}

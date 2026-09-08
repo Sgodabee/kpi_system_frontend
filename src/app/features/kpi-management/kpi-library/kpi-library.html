@@ -1,0 +1,344 @@
+<div class="org-page page-enter">
+
+  <!-- Page Header -->
+  <div class="pg-hd">
+    <div>
+      <div class="pg-breadcrumb">
+        <span class="material-symbols-rounded">library_books</span>
+        KPI Management
+      </div>
+      <h1 class="pg-title">KPI Library</h1>
+      <p class="pg-desc">
+        @if (!isLoading() && total > 0) { {{ total }} KPIs in the library }
+        @else { Define and manage Key Performance Indicators }
+      </p>
+    </div>
+    @if (canManage) {
+      <div class="pg-hd-right">
+        <button class="btn-primary" (click)="openCreate()">
+          <span class="material-symbols-rounded">add</span>
+          Create KPI
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Category summary cards -->
+  @if (!isLoading() && categories().length > 0) {
+    <div class="category-strip">
+      @for (cat of categories(); track cat.id) {
+        <button class="category-chip"
+          [class.active]="selectedCategory === cat.id"
+          (click)="selectedCategory = (selectedCategory === cat.id ? 0 : cat.id); currentPage = 0; load()">
+          {{ cat.name }}
+          @if (cat.kpiCount) {
+            <span class="cat-count">{{ cat.kpiCount }}</span>
+          }
+        </button>
+      }
+      @if (selectedCategory !== 0) {
+        <button class="category-chip clear" (click)="selectedCategory = 0; currentPage = 0; load()">
+          <span class="material-symbols-rounded" style="font-size:14px">close</span>
+          Clear
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="material-symbols-rounded">search</span>
+      <input type="text" placeholder="Search by name or code…" [formControl]="searchCtrl" />
+    </div>
+
+    <select class="filter-select" (change)="onCategoryChange($event)" [value]="selectedCategory">
+      <option value="0">All Categories</option>
+      @for (cat of categories(); track cat.id) {
+        <option [value]="cat.id">{{ cat.name }}</option>
+      }
+    </select>
+
+    <select class="filter-select" (change)="onTypeChange($event)" [value]="selectedType">
+      <option value="">All Types</option>
+      <option value="QUANTITATIVE">Quantitative</option>
+      <option value="QUALITATIVE">Qualitative</option>
+    </select>
+
+    <select class="filter-select" (change)="onStatusChange($event)" [value]="selectedStatus">
+      <option value="">All Statuses</option>
+      <option value="ACTIVE">Active</option>
+      <option value="DRAFT">Draft</option>
+      <option value="INACTIVE">Inactive</option>
+    </select>
+
+    @if (searchCtrl.value || selectedCategory || selectedType || selectedStatus !== 'ACTIVE') {
+      <button class="btn-secondary" (click)="clearFilters()">
+        <span class="material-symbols-rounded">filter_alt_off</span>
+        Clear
+      </button>
+    }
+    @if (!isLoading()) {
+      <span class="filter-count">{{ total }} KPIs</span>
+    }
+  </div>
+
+  <!-- Table card -->
+  <div class="kpi-table-card">
+
+    <!-- Loading -->
+    @if (isLoading()) {
+      <div style="padding:10px">
+        @for (s of [1,2,3,4,5,6,7,8]; track s) {
+          <div class="skeleton-row" style="margin-bottom:3px"></div>
+        }
+      </div>
+    }
+
+    <!-- Error -->
+    @if (!isLoading() && error()) {
+      <div class="error-state">
+        <span class="material-symbols-rounded">error</span>
+        <h3>{{ error() }}</h3>
+        <button class="btn-primary" (click)="load()">
+          <span class="material-symbols-rounded">refresh</span> Retry
+        </button>
+      </div>
+    }
+
+    <!-- Empty -->
+    @if (!isLoading() && !error() && kpis.length === 0) {
+      <div class="empty-state">
+        <span class="material-symbols-rounded">library_books</span>
+        <h3>No KPIs found</h3>
+        <p>{{ searchCtrl.value || selectedCategory ? 'Try adjusting your filters.' : 'No KPIs have been created yet.' }}</p>
+      </div>
+    }
+
+    <!-- Table -->
+    @if (!isLoading() && !error() && kpis.length > 0) {
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="sortable" [class.sorted]="sortField==='code'" (click)="sort('code')">
+                Code <span class="material-symbols-rounded sort-ico">{{ sortIcon('code') }}</span>
+              </th>
+              <th class="sortable" [class.sorted]="sortField==='name'" (click)="sort('name')">
+                KPI Name <span class="material-symbols-rounded sort-ico">{{ sortIcon('name') }}</span>
+              </th>
+              <th class="sortable" [class.sorted]="sortField==='categoryName'" (click)="sort('categoryName')">
+                Category <span class="material-symbols-rounded sort-ico">{{ sortIcon('categoryName') }}</span>
+              </th>
+              <th>Type</th>
+              <th>Unit</th>
+              <th>Frequency</th>
+              <th>Target</th>
+              <th>Weight</th>
+              <th>Status</th>
+              @if (canManage) { <th></th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (kpi of kpis; track kpi.id) {
+              <tr (click)="viewKpi(kpi.id)">
+                <td>
+                  @if (kpi.code) {
+                    <span class="kpi-code">{{ kpi.code }}</span>
+                  } @else {
+                    <span style="color:var(--text-muted)">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="row-name">{{ kpi.name }}</span>
+                  @if (kpi.description) {
+                    <div class="row-sub truncate" style="max-width:280px">{{ kpi.description }}</div>
+                  }
+                </td>
+                <td>
+                  @if (kpi.categoryName) {
+                    <span class="badge badge-gray">{{ kpi.categoryName }}</span>
+                  } @else { <span style="color:var(--text-muted)">—</span> }
+                </td>
+                <td>
+                  @if (kpi.type) {
+                    <span class="badge {{ typeBadge(kpi.type) }}">{{ typeLabel(kpi.type) }}</span>
+                  }
+                </td>
+                <td>{{ kpi.unit ?? '—' }}</td>
+                <td>
+                  @if (kpi.frequency) {
+                    <span class="freq-chip">{{ kpi.frequency | titlecase }}</span>
+                  } @else { — }
+                </td>
+                <td>{{ kpi.targetValue != null ? kpi.targetValue : '—' }}</td>
+                <td>
+                  @if (kpi.weight != null) {
+                    <span class="weight-chip">{{ kpi.weight }}%</span>
+                  } @else { — }
+                </td>
+                <td>
+                  <span class="badge {{ statusBadge(kpi.status) }}">{{ kpi.status | titlecase }}</span>
+                </td>
+                @if (canManage) {
+                  <td (click)="$event.stopPropagation()" style="white-space:nowrap">
+                    <button class="icon-btn" title="Edit" (click)="openEdit(kpi, $event)">
+                      <span class="material-symbols-rounded" style="font-size:18px">edit</span>
+                    </button>
+                    <button class="icon-btn danger" title="Delete" (click)="deleteKpi(kpi, $event)">
+                      <span class="material-symbols-rounded" style="font-size:18px">delete</span>
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages > 1) {
+        <div class="pagination">
+          <span class="pg-info">Showing {{ startItem }}–{{ endItem }} of {{ total }} KPIs</span>
+          <div class="pg-btns">
+            <button class="pg-btn" [disabled]="currentPage === 0" (click)="goToPage(0)">
+              <span class="material-symbols-rounded">first_page</span>
+            </button>
+            <button class="pg-btn" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
+              <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            @for (n of pageNumbers; track n) {
+              <button class="pg-btn" [class.active]="n === currentPage" (click)="goToPage(n)">{{ n + 1 }}</button>
+            }
+            <button class="pg-btn" [disabled]="currentPage === totalPages - 1" (click)="goToPage(currentPage + 1)">
+              <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+            <button class="pg-btn" [disabled]="currentPage === totalPages - 1" (click)="goToPage(totalPages - 1)">
+              <span class="material-symbols-rounded">last_page</span>
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+</div>
+
+<!-- ── Create / Edit KPI Modal ─────────────────────────────────────────── -->
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal-panel" (click)="$event.stopPropagation()" [formGroup]="kpiForm">
+
+      <!-- Header -->
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span class="material-symbols-rounded">{{ editingId() ? 'edit' : 'add_circle' }}</span>
+          {{ editingId() ? 'Edit KPI' : 'Create KPI' }}
+        </h2>
+        <button class="icon-btn" (click)="closeModal()">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+
+        <!-- Row 1: Name + Code -->
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label class="form-label">KPI Name <span class="required">*</span></label>
+            <input class="form-input" [class.invalid]="fieldError('name')"
+              formControlName="name" placeholder="e.g. Service Delivery Rate" />
+            @if (fieldError('name')) {
+              <span class="form-error">Name is required (min 2 characters)</span>
+            }
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Code</label>
+            <input class="form-input" formControlName="code" placeholder="e.g. KPI-001" />
+          </div>
+        </div>
+
+        <!-- Row 2: Description -->
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-input" formControlName="description" rows="2"
+            placeholder="Brief description of what this KPI measures…"></textarea>
+        </div>
+
+        <!-- Row 3: Category + Type -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Category</label>
+            <select class="form-input" formControlName="categoryId">
+              <option [ngValue]="null">— None —</option>
+              @for (cat of categories(); track cat.id) {
+                <option [ngValue]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Type <span class="required">*</span></label>
+            <select class="form-input" formControlName="type">
+              <option value="QUANTITATIVE">Quantitative</option>
+              <option value="QUALITATIVE">Qualitative</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 4: Unit + Frequency -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Unit of Measure</label>
+            <input class="form-input" formControlName="unit" placeholder="e.g. %, ZAR, count" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Reporting Frequency</label>
+            <select class="form-input" formControlName="frequency">
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="SEMI_ANNUALLY">Semi-Annually</option>
+              <option value="ANNUALLY">Annually</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 5: Target + Weight -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Target Value</label>
+            <input class="form-input" type="number" formControlName="targetValue" placeholder="e.g. 95" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Weight (%)</label>
+            <input class="form-input" type="number" min="0" max="100" formControlName="weight" placeholder="e.g. 20" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Status</label>
+            <select class="form-input" formControlName="status">
+              <option value="DRAFT">Draft</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+      </div><!-- /modal-body -->
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModal()" [disabled]="isSaving()">Cancel</button>
+        <button class="btn-primary" (click)="saveKpi()" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="material-symbols-rounded spin">progress_activity</span>
+            Saving…
+          } @else {
+            <span class="material-symbols-rounded">save</span>
+            {{ editingId() ? 'Update KPI' : 'Create KPI' }}
+          }
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

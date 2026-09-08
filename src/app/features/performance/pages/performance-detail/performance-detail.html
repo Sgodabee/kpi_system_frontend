@@ -1,0 +1,203 @@
+<div class="org-page page-enter">
+
+  @if (isLoading()) {
+    <div>
+      <div class="skeleton" style="height:140px;border-radius:14px;margin-bottom:16px"></div>
+      <div class="skeleton" style="height:80px;border-radius:14px;margin-bottom:16px"></div>
+      <div class="skeleton" style="height:320px;border-radius:14px"></div>
+    </div>
+  }
+
+  @if (!isLoading() && error()) {
+    <div class="info-card"><div class="error-state">
+      <span class="material-symbols-rounded">error</span>
+      <h3>{{ error() }}</h3>
+      <button class="btn-secondary" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> Go Back
+      </button>
+    </div></div>
+  }
+
+  @if (!isLoading() && !error() && record()) {
+
+    <!-- Nav -->
+    <div class="detail-nav">
+      <button class="back-btn" (click)="goBack()">
+        <span class="material-symbols-rounded">arrow_back</span> My Performance
+      </button>
+      <div class="pg-breadcrumb" style="margin:0">
+        <a routerLink="/performance">My Performance</a>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <span>{{ record()!.kpiName }}</span>
+      </div>
+    </div>
+
+    <!-- Hero header -->
+    <div class="pd-hero">
+      <div class="pd-hero-left">
+        <div class="pd-hero-icon">
+          <span class="material-symbols-rounded" style="font-size:26px;color:#2563eb">task_alt</span>
+        </div>
+        <div>
+          @if (record()!.kpiCode) {
+            <span class="kpi-code">{{ record()!.kpiCode }}</span>
+          }
+          <h1 class="pd-kpi-name">{{ record()!.kpiName }}</h1>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+            @if (record()!.categoryName) {
+              <span class="badge badge-gray">{{ record()!.categoryName }}</span>
+            }
+            <span class="badge {{ statusBadge(record()!.status) }}">{{ statusLabel(record()!.status) }}</span>
+            @if (record()!.period) {
+              <span class="badge badge-gray">{{ record()!.period }}</span>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="pd-hero-actions">
+        @if (canEdit) {
+          <button class="btn-secondary" (click)="editRecord()">
+            <span class="material-symbols-rounded">edit</span>
+            {{ record()!.status === 'REJECTED' ? 'Edit & Resubmit' : 'Edit Draft' }}
+          </button>
+        }
+        @if (canSubmit) {
+          <button class="btn-primary" [disabled]="actionBusy()" (click)="submit()">
+            <span class="material-symbols-rounded">send</span> Submit
+          </button>
+        }
+        @if (showApprove) {
+          <button class="btn-primary" [disabled]="actionBusy()" (click)="approve()">
+            <span class="material-symbols-rounded">check_circle</span> Approve
+          </button>
+          <button class="btn-secondary" style="color:var(--danger);border-color:var(--danger-border)" [disabled]="actionBusy()" (click)="reject()">
+            <span class="material-symbols-rounded">cancel</span> Reject
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Workflow timeline -->
+    <div class="info-card">
+      <div class="info-card-title" style="margin-bottom:16px">Workflow</div>
+      <performance-timeline
+        [status]="record()!.status"
+        [rejectionComment]="record()!.reviewerComment"
+        [reviewerName]="record()!.reviewerName">
+      </performance-timeline>
+    </div>
+
+    <!-- Metrics row -->
+    <div class="pd-metrics">
+      <div class="pd-metric">
+        <span class="pd-metric-lbl">Target</span>
+        <span class="pd-metric-val">{{ record()!.targetValue != null ? record()!.targetValue + (record()!.kpiUnit ? ' ' + record()!.kpiUnit : '') : '—' }}</span>
+      </div>
+      <div class="pd-metric">
+        <span class="pd-metric-lbl">Actual</span>
+        <span class="pd-metric-val {{ achievementColor(record()!.achievementPct) }}">
+          @if (record()!.actualValue != null) {
+            {{ record()!.actualValue }}{{ record()!.kpiUnit ? ' ' + record()!.kpiUnit : '' }}
+          } @else if (record()!.actualText) {
+            {{ record()!.actualText }}
+          } @else { — }
+        </span>
+      </div>
+      @if (record()!.achievementPct != null) {
+        <div class="pd-metric">
+          <span class="pd-metric-lbl">Achievement</span>
+          <span class="pd-metric-val {{ achievementColor(record()!.achievementPct) }}">{{ record()!.achievementPct }}%</span>
+        </div>
+      }
+      @if (record()!.score != null) {
+        <div class="pd-metric">
+          <span class="pd-metric-lbl">Score</span>
+          <span class="pd-metric-val {{ achievementColor(record()!.score) }}">{{ record()!.score }}%</span>
+        </div>
+      }
+      @if (record()!.weight != null) {
+        <div class="pd-metric">
+          <span class="pd-metric-lbl">Weight</span>
+          <span class="pd-metric-val">{{ record()!.weight }}%</span>
+        </div>
+      }
+    </div>
+
+    <!-- Employee comment display -->
+    @if (record()!.comment) {
+      <div class="info-card">
+        <div class="info-card-title">Employee Comment</div>
+        <p class="pd-employee-comment">{{ record()!.comment }}</p>
+      </div>
+    }
+
+    <!-- Tabbed content: Comments + Evidence -->
+    <div class="info-card" style="padding:0;overflow:hidden">
+      <div class="tab-bar" style="padding:0 20px">
+        <button class="tab-btn" [class.active]="activeTab() === 'details'" (click)="activeTab.set('details')">
+          <span class="material-symbols-rounded">info</span> Details
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'comments'" (click)="activeTab.set('comments')">
+          <span class="material-symbols-rounded">comment</span>
+          Comments @if (record()!.commentCount) { ({{ record()!.commentCount }}) }
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'evidence'" (click)="activeTab.set('evidence')">
+          <span class="material-symbols-rounded">attach_file</span>
+          Evidence @if (evidence().length > 0) { ({{ evidence().length }}) }
+        </button>
+      </div>
+
+      <!-- Details -->
+      @if (activeTab() === 'details') {
+        <div style="padding:24px">
+          <div class="pd-details-grid">
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">KPI Information</div>
+              <div class="info-row"><span class="info-label">Category</span><span class="info-value">{{ record()!.categoryName ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Data Type</span><span class="info-value">{{ record()!.kpiDataType ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Unit</span><span class="info-value">{{ record()!.kpiUnit ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Frequency</span><span class="info-value">{{ record()!.frequency ?? '—' }}</span></div>
+              <div class="info-row"><span class="info-label">Weight</span><span class="info-value">{{ record()!.weight != null ? record()!.weight + '%' : '—' }}</span></div>
+            </div>
+            <div class="info-card" style="box-shadow:none;border:1px solid var(--border-color)">
+              <div class="info-card-title">Submission Timeline</div>
+              @if (record()!.period) {
+                <div class="info-row"><span class="info-label">Period</span><span class="info-value">{{ record()!.period }}</span></div>
+              }
+              @if (record()!.submittedAt) {
+                <div class="info-row"><span class="info-label">Submitted</span><span class="info-value">{{ record()!.submittedAt | date:'dd MMM yyyy HH:mm' }}</span></div>
+              }
+              @if (record()!.reviewerName) {
+                <div class="info-row"><span class="info-label">Reviewer</span><span class="info-value">{{ record()!.reviewerName }}</span></div>
+              }
+              @if (record()!.reviewedAt) {
+                <div class="info-row"><span class="info-label">Reviewed</span><span class="info-value">{{ record()!.reviewedAt | date:'dd MMM yyyy HH:mm' }}</span></div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Comments -->
+      @if (activeTab() === 'comments') {
+        <div style="padding:24px">
+          <performance-comments [recordId]="record()!.id" [readonly]="false"></performance-comments>
+        </div>
+      }
+
+      <!-- Evidence -->
+      @if (activeTab() === 'evidence') {
+        <div style="padding:24px">
+          <evidence-uploader
+            [recordId]="record()!.id"
+            [existingEvidence]="evidence()"
+            [readonly]="!canEdit"
+            (evidenceUploaded)="onEvidenceUploaded($event)"
+            (evidenceDeleted)="onEvidenceDeleted($event)">
+          </evidence-uploader>
+        </div>
+      }
+    </div>
+  }
+</div>
+
